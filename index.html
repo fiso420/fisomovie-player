@@ -1,411 +1,349 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="description" content="FISO VDO PLAYER — A premium, browser-based video player that opens MKV, HEVC, AV1, HDR, multi-audio and subtitle tracks directly in your browser. No server, no upload, no transcoding." />
-  <meta name="theme-color" content="#0a0a12" />
-  <meta name="color-scheme" content="dark light" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>FISOMOVIE PLAYER — Next-Gen Web Video Player</title>
+  
+  <meta name="description" content="FISOMOVIE PLAYER is a high-performance, Liquid Glass HTML5 video player supporting MP4, WebM, HLS m3u8 streams, SRT/VTT subtitles, multi-track audio, and customizable themes.">
+  <meta name="theme-color" content="#0d0f17" id="meta-theme-color">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="FISO VDO PLAYER — Your videos. Your player. Your control." />
-  <meta property="og:description" content="Play compatible local media or accessible direct video URLs in your browser. MKV, HEVC, AV1, HDR, multi-audio, subtitles." />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="/favicon.svg" />
+  <!-- Content Security Policy: Safe, secure, and compatible with CDNs and blob media -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: blob: https:;
+    media-src 'self' blob: data: https: http:;
+    connect-src 'self' blob: data: https: http:;
+    worker-src 'self' blob:;
+  ">
 
-  <title>FISO VDO PLAYER — Premium Browser Video Player</title>
+  <!-- Inline SVG Favicon (No external .ico or image dependencies) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0%25'%20y1='0%25'%20x2='100%25'%20y2='100%25'%3E%3Cstop%20offset='0%25'%20stop-color='%236366f1'/%3E%3Cstop%20offset='100%25'%20stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='64'%20height='64'%20rx='16'%20fill='%230a0c14'/%3E%3Crect%20x='2'%20y='2'%20width='60'%20height='60'%20rx='14'%20fill='none'%20stroke='url(%23g)'%20stroke-width='2'%20stroke-opacity='0.4'/%3E%3Cpath%20d='M24%2018%20L48%2032%20L24%2046%20Z'%20fill='url(%23g)'/%3E%3C/svg%3E">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Theme detection: runs before CSS to prevent flash -->
-  <script>
-    (function () {
-      try {
-        var saved = localStorage.getItem('fiso-theme');
-        if (saved === 'light' || saved === 'dark') {
-          document.documentElement.setAttribute('data-theme', saved);
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-          document.documentElement.setAttribute('data-theme', 'light');
-        } else {
-          document.documentElement.setAttribute('data-theme', 'dark');
-        }
-      } catch (e) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-    })();
-  </script>
+  <!-- Application Styles -->
+  <link rel="stylesheet" href="style.css">
 
-  <!-- MoviPlayer web component (CDN, zero-build) -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/movi-player@0.4.0/dist/element.js" crossorigin="anonymous"></script>
-
-  <link rel="stylesheet" href="/style.css" />
+  <!-- HLS.js for HTTP Live Streaming support (.m3u8) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 </head>
 <body>
+  <div class="app-container">
+    
+    <!-- Top Navigation Header -->
+    <header class="glass-header" role="banner">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="var(--accent-color)" fill-opacity="0.2"/>
+          <path d="M12 9L23 16L12 23V9Z" fill="var(--accent-color)"/>
+        </svg>
+        <span class="brand-title">FISO<strong>MOVIE</strong></span>
+      </div>
 
-  <!-- ============ HEADER ============ -->
-  <header class="site-header" id="site-header">
-    <div class="header-inner">
-      <a href="#top" class="brand" aria-label="FISO VDO PLAYER home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 40 40" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#fisoGrad)" />
-            <path d="M16 13.5L27.5 20L16 26.5V13.5Z" fill="#fff" />
-            <defs>
-              <linearGradient id="fisoGrad" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#8B5CF6" />
-                <stop offset="1" stop-color="#22D3EE" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </span>
-        <span class="brand-text">FISO <span class="brand-accent">VDO</span> PLAYER</span>
-      </a>
-
-      <nav class="main-nav" id="main-nav" aria-label="Primary">
-        <a href="#player-section" class="nav-link">Player</a>
-        <a href="#features" class="nav-link">Features</a>
-        <a href="#formats" class="nav-link">Formats</a>
-        <a href="#troubleshooting" class="nav-link">Troubleshooting</a>
-        <a href="#faq" class="nav-link">FAQ</a>
-      </nav>
-
-      <div class="header-actions">
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light and dark theme" title="Toggle theme">
-          <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-          </svg>
-          <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
+      <nav class="header-actions" aria-label="User preferences">
+        <button id="theme-panel-btn" class="icon-btn" title="Customize theme and accent color" aria-label="Open appearance settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
 
-        <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-nav">
-          <span></span><span></span><span></span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <main id="top">
-
-    <!-- ============ HERO ============ -->
-    <section class="hero" id="player-section">
-      <div class="hero-bg" aria-hidden="true">
-        <div class="hero-orb hero-orb--1"></div>
-        <div class="hero-orb hero-orb--2"></div>
-        <div class="hero-grid"></div>
-      </div>
-
-      <div class="hero-content">
-        <p class="hero-eyebrow">Premium browser video player</p>
-        <h1 class="hero-title">
-          Your videos. Your player.<br /><span class="gradient-text">Your control.</span>
-        </h1>
-        <p class="hero-subtitle">
-          Open compatible local media or play accessible direct video URLs directly in your browser.
-          MKV, HEVC, AV1, HDR, multi-audio and subtitle tracks — all processed on your device.
-        </p>
-
-        <!-- Input panel -->
-        <div class="input-panel" id="input-panel">
-          <div class="input-tabs" role="tablist" aria-label="Source type">
-            <button class="input-tab is-active" role="tab" aria-selected="true" data-tab="url" id="tab-url" aria-controls="panel-url">URL</button>
-            <button class="input-tab" role="tab" aria-selected="false" data-tab="files" id="tab-files" aria-controls="panel-files">Local Files</button>
-            <button class="input-tab" role="tab" aria-selected="false" data-tab="folder" id="tab-folder" aria-controls="panel-folder">Folder</button>
-          </div>
-
-          <!-- URL panel -->
-          <div class="input-tab-panel is-active" role="tabpanel" id="panel-url" aria-labelledby="tab-url">
-            <div class="url-row">
-              <input type="url" id="url-input" class="text-input" placeholder="https://example.com/video.mp4 or .m3u8" autocomplete="off" spellcheck="false" />
-              <button type="button" class="btn btn-ghost" id="paste-btn" title="Paste from clipboard">Paste</button>
-            </div>
-            <div class="url-actions">
-              <button type="button" class="btn btn-primary" id="play-url-btn">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                Play URL
-              </button>
-              <p class="input-hint" id="url-hint">Direct video or audio URL. CORS must allow browser access.</p>
-            </div>
-          </div>
-
-          <!-- Local files panel -->
-          <div class="input-tab-panel" role="tabpanel" id="panel-files" aria-labelledby="tab-files" hidden>
-            <div class="drop-zone" id="drop-zone-files">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-              <p><strong>Drop video files here</strong> or</p>
-              <label class="btn btn-primary" for="file-input">
-                Select files
-                <input type="file" id="file-input" accept="video/*,audio/*,.mkv,.mov,.avi,.ts,.m2ts" multiple hidden />
-              </label>
-              <p class="input-hint">Your files never leave your device. Playback is 100% local.</p>
-            </div>
-            <div class="playlist" id="playlist-files" hidden>
-              <div class="playlist-head">
-                <span id="playlist-files-label">0 files</span>
-                <button type="button" class="btn btn-small btn-ghost" id="clear-files-btn">Clear</button>
-              </div>
-              <ul class="playlist-list" id="playlist-files-list"></ul>
-            </div>
-          </div>
-
-          <!-- Folder panel -->
-          <div class="input-tab-panel" role="tabpanel" id="panel-folder" aria-labelledby="tab-folder" hidden>
-            <div class="drop-zone" id="drop-zone-folder">
-              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-              <p><strong>Select a folder</strong> to build a playlist</p>
-              <label class="btn btn-primary" for="folder-input">
-                Choose folder
-                <input type="file" id="folder-input" webkitdirectory directory multiple hidden />
-              </label>
-              <p class="input-hint" id="folder-fallback-hint" hidden>Folder selection isn't supported in this browser. Use “Local Files” instead.</p>
-            </div>
-            <div class="playlist" id="playlist-folder" hidden>
-              <div class="playlist-head">
-                <span id="playlist-folder-label">0 files</span>
-                <button type="button" class="btn btn-small btn-ghost" id="clear-folder-btn">Clear</button>
-              </div>
-              <ul class="playlist-list" id="playlist-folder-list"></ul>
-            </div>
-          </div>
-
-          <!-- Status / error region -->
-          <div class="status-region" id="status-region" role="status" aria-live="polite"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ PLAYER ============ -->
-    <section class="player-section" id="player-wrap">
-      <div class="section-inner">
-        <div class="player-shell" id="player-shell">
-          <movi-player
-            id="fiso-player"
-            controls
-            theme="dark"
-            objectfit="contain"
-            playsinline
-            style="width:100%;height:100%;display:block;"
-          ></movi-player>
-
-          <div class="player-empty" id="player-empty">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/></svg>
-            <p>No media loaded</p>
-            <span>Paste a URL, choose files, or drop a video above.</span>
-          </div>
-
-          <div class="player-loading" id="player-loading" hidden>
-            <div class="spinner"></div>
-            <p id="player-loading-text">Loading media…</p>
-          </div>
-
-          <div class="player-error" id="player-error" hidden>
-            <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
-            <p id="player-error-text">Playback error</p>
-            <button type="button" class="btn btn-small" id="player-retry-btn">Retry</button>
-          </div>
-        </div>
-
-        <!-- Now-playing bar -->
-        <div class="now-playing" id="now-playing" hidden>
-          <div class="now-playing-info">
-            <span class="now-playing-label">Now playing</span>
-            <span class="now-playing-title" id="now-playing-title">—</span>
-          </div>
-          <button type="button" class="btn btn-small btn-ghost" id="reset-player-btn" title="Reset player settings">Reset</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ FEATURES ============ -->
-    <section class="section" id="features">
-      <div class="section-inner">
-        <div class="section-head">
-          <p class="section-eyebrow">Capabilities</p>
-          <h2 class="section-title">Built for real-world video</h2>
-          <p class="section-sub">Everything below runs entirely in your browser. No uploads, no transcoding server.</p>
-        </div>
-
-        <div class="feature-grid">
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg></div>
-            <h3>Broad format support</h3>
-            <p>MP4, MKV, WebM, MOV, TS, AVI and adaptive HLS / DASH streams — handled by FFmpeg WASM demuxing plus WebCodecs decoding.</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg></div>
-            <h3>Multi-track playback</h3>
-            <p>Switch between embedded audio tracks and subtitle tracks when the media file provides them. External subtitles are supported via standard <code>&lt;track&gt;</code> markup.</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg></div>
-            <h3>Privacy by design</h3>
-            <p>Local files are decoded on your device. Nothing is uploaded. Object URLs and player instances are cleaned up when you switch media.</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg></div>
-            <h3>Professional controls</h3>
-            <p>Play/pause, seek, buffered progress, volume, playback speed, fullscreen, Picture-in-Picture, keyboard shortcuts and touch gestures.</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 17l6-6 4 4 6-8"/></svg></div>
-            <h3>Adaptive streaming</h3>
-            <p>HLS (.m3u8), MPEG-DASH (.mpd) and Smooth Streaming are unified through Shaka Player with quality and track switching intact.</p>
-          </article>
-          <article class="feature-card">
-            <div class="feature-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
-            <h3>HDR & 4K ready</h3>
-            <p>Detects and renders BT.2020 / PQ / HLG content on supported displays via WebGL2. Falls back to tone-mapped SDR elsewhere.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ SUPPORTED FORMATS ============ -->
-    <section class="section section--alt" id="formats">
-      <div class="section-inner">
-        <div class="section-head">
-          <p class="section-eyebrow">Compatibility</p>
-          <h2 class="section-title">Supported formats &amp; codecs</h2>
-          <p class="section-sub">Playback depends on the media source, your browser version, your hardware decoder and available memory. Not every codec works on every device.</p>
-        </div>
-
-        <div class="format-table-wrap">
-          <table class="format-table">
-            <thead>
-              <tr><th>Category</th><th>Supported</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Containers</td><td>MP4, MKV, WebM, MOV, TS, AVI, M2TS</td><td>MKV and AVI rely on FFmpeg WASM demuxing.</td></tr>
-              <tr><td>Video codecs</td><td>H.264, HEVC/H.265, AV1, VP8, VP9</td><td>HEVC and AV1 need WebCodecs or software fallback. Safari may need hardware support.</td></tr>
-              <tr><td>Audio codecs</td><td>AAC, MP3, Opus, FLAC, AC-3, E-AC-3</td><td>Multi-track switching depends on the file.</td></tr>
-              <tr><td>Adaptive streaming</td><td>HLS (.m3u8), MPEG-DASH (.mpd), Smooth Streaming</td><td>CORS must be configured on the media host.</td></tr>
-              <tr><td>Subtitles</td><td>WebVTT, SRT, ASS, PGS, DVB</td><td>Embedded tracks or external <code>&lt;track&gt;</code> elements.</td></tr>
-              <tr><td>HDR</td><td>BT.2020 / PQ / HLG</td><td>Requires a compatible display and WebGL2.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="format-note">4K+ sources may be limited to 1.5× playback speed because hardware decoders cannot sustain higher effective frame rates.</p>
-      </div>
-    </section>
-
-    <!-- ============ TROUBLESHOOTING ============ -->
-    <section class="section" id="troubleshooting">
-      <div class="section-inner">
-        <div class="section-head">
-          <p class="section-eyebrow">Help</p>
-          <h2 class="section-title">Troubleshooting</h2>
-          <p class="section-sub">Quick checks for the most common playback problems.</p>
-        </div>
-
-        <div class="trouble-grid">
-          <article class="trouble-card">
-            <h3>Unsupported codec / black screen</h3>
-            <p>Your browser or device may not expose a decoder for that codec. Try Chrome or Edge on desktop, or check whether the file uses HEVC or AV1 that your hardware cannot decode. A compatibility message appears instead of a blank player.</p>
-          </article>
-          <article class="trouble-card">
-            <h3>No audio</h3>
-            <p>Check the volume and mute controls. If the file has multiple audio tracks, open the player track menu and select the correct one. Some containers store audio in a codec your browser cannot decode.</p>
-          </article>
-          <article class="trouble-card">
-            <h3>CORS / remote URL fails</h3>
-            <p>A remote server must send <code>Access-Control-Allow-Origin</code> headers and support HTTP Range requests. Hotlink protection and signed URLs can also block playback. Local files never have this problem.</p>
-          </article>
-          <article class="trouble-card">
-            <h3>Buffering / stutter</h3>
-            <p>High-bitrate 4K or 8K files may exceed what your device can decode in real time. Lower the playback speed, close other tabs, or use a lower-resolution source. Network speed also matters for remote URLs.</p>
-          </article>
-          <article class="trouble-card">
-            <h3>HLS / DASH stream won't play</h3>
-            <p>Confirm the manifest URL ends with <code>.m3u8</code> or <code>.mpd</code> and that the host allows CORS. Mixed content (HTTP media on an HTTPS page) is blocked by browsers.</p>
-          </article>
-          <article class="trouble-card">
-            <h3>Subtitles missing</h3>
-            <p>Embedded subtitle tracks appear in the player menu when the file contains them. For external subtitles, the file must be loaded through the player's subtitle picker or a <code>&lt;track&gt;</code> element.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ FAQ ============ -->
-    <section class="section section--alt" id="faq">
-      <div class="section-inner">
-        <div class="section-head">
-          <p class="section-eyebrow">Questions</p>
-          <h2 class="section-title">Frequently asked</h2>
-        </div>
-
-        <div class="faq-list" id="faq-list">
-          <details class="faq-item">
-            <summary>Are my local videos uploaded anywhere?</summary>
-            <div class="faq-body"><p>No. Local files are read directly by your browser and decoded on your device. FISO VDO PLAYER has no upload endpoint and does not transmit local media to any server.</p></div>
-          </details>
-          <details class="faq-item">
-            <summary>Does it work on iPhone and iPad?</summary>
-            <div class="faq-body"><p>Yes, with limits. Safari 18+ exposes WebCodecs, but codec support depends on the device and iOS version. Local file selection works; folder selection may not be available in Safari. HLS streams are the best-tested remote format on iOS.</p></div>
-          </details>
-          <details class="faq-item">
-            <summary>Why does a remote MP4 sometimes fail?</summary>
-            <div class="faq-body"><p>Remote playback depends on the media host. It must allow cross-origin access, support range requests for seeking, and not require authentication. A direct URL that works in a browser tab may still be blocked for a player due to CORS.</p></div>
-          </details>
-          <details class="faq-item">
-            <summary>Can I play DRM-protected content?</summary>
-            <div class="faq-body"><p>The player engine has optional Widevine / PlayReady / FairPlay support, but it requires a licence server and is not configured in this free deployment. DRM streams will show a clear "protected video" message instead of playing.</p></div>
-          </details>
-          <details class="faq-item">
-            <summary>Is there a file size limit?</summary>
-            <div class="faq-body"><p>There is no hard limit, but very large 4K/8K files need enough device memory and a fast enough decoder. The player buffers ranges rather than loading the whole file at once.</p></div>
-          </details>
-          <details class="faq-item">
-            <summary>Can I use this on my own website?</summary>
-            <div class="faq-body"><p>Yes. The player engine is Apache-2.0 licensed. Keep the attribution notice in the About / Credits area and respect the licence terms. The FISO branding and this UI are yours to adapt.</p></div>
-          </details>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ============ FOOTER ============ -->
-  <footer class="site-footer">
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <a href="#top" class="brand brand--footer" aria-label="FISO VDO PLAYER home">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 40 40" width="30" height="30" fill="none"><rect x="2" y="2" width="36" height="36" rx="10" fill="url(#fisoGradF)"/><path d="M16 13.5L27.5 20L16 26.5V13.5Z" fill="#fff"/><defs><linearGradient id="fisoGradF" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#8B5CF6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs></svg>
-          </span>
-          <span class="brand-text">FISO <span class="brand-accent">VDO</span> PLAYER</span>
+        <a href="https://github.com/fiso420/fisomovie-player" target="_blank" rel="noopener noreferrer" class="github-star-link" title="Opens repository in a new tab; star it on GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>Star on GitHub</span>
         </a>
-        <p class="footer-tagline">A premium browser video player. Your media stays on your device.</p>
-      </div>
-
-      <nav class="footer-nav" aria-label="Footer">
-        <a href="#player-section">Player</a>
-        <a href="#features">Features</a>
-        <a href="#formats">Formats</a>
-        <a href="#troubleshooting">Troubleshooting</a>
-        <a href="#faq">FAQ</a>
       </nav>
+    </header>
 
-      <div class="footer-meta">
-        <p class="footer-credit">
-          Playback engine: <a href="https://github.com/MrUjjwalG/movi-player" target="_blank" rel="noopener noreferrer">movi-player</a>
-          by mrujjwalg, licensed under Apache-2.0. Not affiliated with moviplayer.com.
-        </p>
-        <p class="footer-copy">© <span id="footer-year"></span> FISO VDO PLAYER. No trackers. No uploads.</p>
+    <!-- Source Input Bar -->
+    <section class="glass-panel source-controller" aria-label="Media source selector">
+      <div class="source-inputs-row">
+        <div class="url-input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="url" id="stream-url-input" placeholder="Paste direct video URL (MP4, WebM, HLS .m3u8)..." autocomplete="off" spellcheck="false">
+          <button id="load-url-btn" class="glass-btn btn-primary" type="button">Load Stream</button>
+        </div>
+
+        <div class="file-input-wrap">
+          <label for="local-file-input" class="glass-btn file-picker-label" title="Select video from disk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Open Local File</span>
+          </label>
+          <input type="file" id="local-file-input" accept="video/*,.mkv,.mp4,.m3u8,.webm,.mov,.avi" class="visually-hidden">
+          
+          <button id="clear-source-btn" class="glass-btn btn-secondary" title="Clear current source" type="button">Clear</button>
+        </div>
       </div>
-    </div>
-  </footer>
+      
+      <!-- Drag & Drop Overlay Zone Notice -->
+      <div id="drop-indicator" class="drop-hint">
+        <span>Drag & drop media anywhere to play immediately</span>
+      </div>
+    </section>
 
-  <!-- ============ DRAG OVERLAY (hidden by default) ============ -->
-  <div class="drag-overlay" id="drag-overlay" hidden aria-hidden="true">
-    <div class="drag-overlay-inner">
-      <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
-      <p>Drop video files to play</p>
-    </div>
+    <!-- MAIN VIDEO PLAYER CONTAINER -->
+    <main class="player-wrapper" id="player-wrapper" tabindex="0" aria-label="Video Player Area">
+      <div class="video-aspect-box" id="video-aspect-box">
+        
+        <!-- Native Video Element -->
+        <video id="main-video" playsinline preload="metadata" crossorigin="anonymous">
+          <p>Your browser does not support the HTML5 video element.</p>
+        </video>
+
+        <!-- Dynamic Subtitle Display Rendering Box -->
+        <div id="subtitle-renderer" class="subtitle-overlay" aria-live="polite"></div>
+
+        <!-- Big Center Play / Pause Feedback Pulse -->
+        <div id="center-feedback" class="center-feedback-indicator" aria-hidden="true">
+          <svg id="center-icon" viewBox="0 0 24 24" fill="currentColor"></svg>
+        </div>
+
+        <!-- Loading / Buffering Spinner -->
+        <div id="buffering-spinner" class="player-loading-spinner" aria-hidden="true">
+          <div class="spinner-ring"></div>
+          <span class="loading-label">Buffering...</span>
+        </div>
+
+        <!-- Interruption & Recovery Overlay (Appears on failure or media completion) -->
+        <div id="recovery-overlay" class="player-overlay-modal glass-blur visually-hidden" role="alertdialog" aria-modal="true">
+          <div class="modal-card">
+            <div class="modal-icon-wrap" id="overlay-status-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3 id="overlay-title" class="modal-title">Playback Interrupted</h3>
+            <p id="overlay-message" class="modal-desc">The media stream has concluded or encountered a network error.</p>
+            <div class="modal-actions">
+              <button id="resume-retry-btn" class="glass-btn btn-primary">Continue Playing</button>
+              <button id="restart-btn" class="glass-btn btn-secondary">Restart</button>
+            </div>
+            <p id="overlay-note" class="modal-note"></p>
+          </div>
+        </div>
+
+        <!-- Popover Settings Menus (Speed, Audio, Quality, Subtitles) -->
+        <div id="settings-menu" class="settings-popover glass-blur visually-hidden" role="menu">
+          <div class="menu-header">
+            <span id="menu-title">Settings</span>
+            <button id="close-menu-btn" class="icon-btn-tiny" aria-label="Close menu">&times;</button>
+          </div>
+          <div id="menu-content" class="menu-list">
+            <!-- Dynamically populated options -->
+          </div>
+        </div>
+
+        <!-- CUSTOM LIQUID GLASS VIDEO CONTROLS BAR -->
+        <div class="player-controls-container" id="player-controls" role="toolbar" aria-label="Playback controls">
+          
+          <!-- Timeline / Scrubber Bar -->
+          <div class="scrubber-wrapper">
+            <div class="timeline-bar" id="timeline-container">
+              <div class="timeline-buffered" id="timeline-buffered"></div>
+              <div class="timeline-progress" id="timeline-progress"></div>
+              <div class="timeline-thumb" id="timeline-thumb"></div>
+            </div>
+            <span class="time-tooltip" id="time-tooltip">00:00</span>
+          </div>
+
+          <!-- Bottom Controls Row -->
+          <div class="controls-row">
+            
+            <!-- Left Controls: Play, Skip, Volume, Time -->
+            <div class="controls-group left">
+              <button id="play-pause-btn" class="ctrl-btn" title="Play (Space / K)" aria-label="Play">
+                <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </button>
+
+              <button id="skip-back-btn" class="ctrl-btn" title="Rewind 10s (Left Arrow)" aria-label="Skip backward 10 seconds">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/><text x="12" y="15" font-size="8" text-anchor="middle" fill="currentColor" stroke="none" font-weight="bold">10</text></svg>
+              </button>
+
+              <button id="skip-fwd-btn" class="ctrl-btn" title="Forward 10s (Right Arrow)" aria-label="Skip forward 10 seconds">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/><text x="12" y="15" font-size="8" text-anchor="middle" fill="currentColor" stroke="none" font-weight="bold">10</text></svg>
+              </button>
+
+              <div class="volume-control-wrap">
+                <button id="volume-mute-btn" class="ctrl-btn" title="Mute/Unmute (M)" aria-label="Mute">
+                  <svg id="vol-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                </button>
+                <div class="volume-slider-box">
+                  <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume slider">
+                </div>
+              </div>
+
+              <div class="timestamp-display" aria-live="off">
+                <span id="current-time">0:00</span>
+                <span class="time-sep">/</span>
+                <span id="duration-time">0:00</span>
+              </div>
+            </div>
+
+            <!-- Right Controls: Audio track, Quality, Subtitles, Speed, PiP, Fullscreen -->
+            <div class="controls-group right">
+              <!-- Audio Track Button -->
+              <button id="audio-track-btn" class="ctrl-btn text-icon-btn" title="Audio Track Selector" aria-haspopup="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <span class="btn-subtext" id="audio-track-label">Audio</span>
+              </button>
+
+              <!-- Quality Selector Button -->
+              <button id="quality-btn" class="ctrl-btn text-icon-btn" title="Video Quality" aria-haspopup="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                <span class="btn-subtext" id="quality-label">Auto</span>
+              </button>
+
+              <!-- Subtitle Button -->
+              <button id="subtitles-btn" class="ctrl-btn" title="Subtitles (VTT/SRT)" aria-haspopup="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 10h4M14 10h4M6 14h8"/></svg>
+              </button>
+
+              <!-- Speed Selector Button -->
+              <button id="speed-btn" class="ctrl-btn text-icon-btn" title="Playback Speed" aria-haspopup="true">
+                <span id="speed-label">1x</span>
+              </button>
+
+              <!-- Picture In Picture -->
+              <button id="pip-btn" class="ctrl-btn" title="Picture in Picture" aria-label="Picture in picture">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="10" width="8" height="6" rx="1"/></svg>
+              </button>
+
+              <!-- Fullscreen Button -->
+              <button id="fullscreen-btn" class="ctrl-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
+                <svg id="fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Source Info & Advanced Capabilities Note -->
+    <section class="glass-panel info-banner">
+      <div class="info-details">
+        <h2 class="section-title">Stream Status & Codec Intelligence</h2>
+        <p id="source-status-text" class="status-indicator">Engine: Idle (Ready for video URL or file drop)</p>
+      </div>
+      <div class="codec-tags" id="codec-caps-box">
+        <span class="tag">Native HTML5</span>
+        <span class="tag">HLS.js Adaptive</span>
+        <span class="tag">WebCodecs &amp; MSE</span>
+      </div>
+    </section>
+
+    <!-- Interactive Subtitle Loader & Font Customizer -->
+    <details class="glass-panel expandable-drawer">
+      <summary class="drawer-header">Subtitle File (.vtt / .srt) & Styling Settings</summary>
+      <div class="drawer-body">
+        <div class="drawer-col">
+          <label for="sub-file-input" class="form-label">Upload external subtitle file:</label>
+          <input type="file" id="sub-file-input" accept=".vtt,.srt" class="form-input-file">
+          <p class="form-helper">SRT files are parsed on-the-fly directly in memory using Web Workers/Blobs.</p>
+        </div>
+        <div class="drawer-col">
+          <label for="sub-size-select" class="form-label">Subtitle Text Size:</label>
+          <select id="sub-size-select" class="form-select">
+            <option value="16px">Small (16px)</option>
+            <option value="22px" selected>Normal (22px)</option>
+            <option value="28px">Large (28px)</option>
+            <option value="34px">Extra Large (34px)</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <!-- THEME CUSTOMIZATION MODAL / SLIDEOUT -->
+    <aside id="theme-modal" class="theme-drawer glass-blur visually-hidden" aria-labelledby="theme-modal-title">
+      <div class="drawer-card">
+        <div class="drawer-top">
+          <h3 id="theme-modal-title">Appearance & Accent</h3>
+          <button id="close-theme-btn" class="icon-btn-tiny" aria-label="Close appearance panel">&times;</button>
+        </div>
+
+        <div class="theme-option-group">
+          <label class="group-title">Theme Mode</label>
+          <div class="segmented-control" role="radiogroup">
+            <button class="segment-btn active" data-mode="dark">Dark</button>
+            <button class="segment-btn" data-mode="light">Light</button>
+            <button class="segment-btn" data-mode="system">System</button>
+          </div>
+        </div>
+
+        <div class="theme-option-group">
+          <label class="group-title">Accent Color Preset</label>
+          <div class="palette-swatches" id="accent-presets">
+            <button class="swatch" data-color="#6366f1" style="background:#6366f1;" title="Indigo"></button>
+            <button class="swatch" data-color="#06b6d4" style="background:#06b6d4;" title="Cyan"></button>
+            <button class="swatch" data-color="#10b981" style="background:#10b981;" title="Emerald"></button>
+            <button class="swatch" data-color="#f59e0b" style="background:#f59e0b;" title="Amber"></button>
+            <button class="swatch" data-color="#ec4899" style="background:#ec4899;" title="Pink"></button>
+            <button class="swatch" data-color="#8b5cf6" style="background:#8b5cf6;" title="Violet"></button>
+          </div>
+        </div>
+
+        <div class="theme-option-group">
+          <label for="custom-hex-picker" class="group-title">Custom Accent HEX</label>
+          <div class="hex-picker-row">
+            <input type="color" id="custom-hex-picker" value="#6366f1">
+            <input type="text" id="custom-hex-text" value="#6366f1" maxlength="7" spellcheck="false" class="form-text-hex">
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <button id="reset-theme-btn" class="glass-btn btn-secondary w-100">Reset to Default</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- USER COMMENTS AND SAFE REACTION SECTION -->
+    <section class="glass-panel comments-section" aria-labelledby="comments-heading">
+      <div class="comments-header">
+        <h2 id="comments-heading" class="section-title">Community Discussion</h2>
+        <span class="badge" id="comment-count-badge">0 Comments</span>
+      </div>
+
+      <!-- Warning Box For Moderated Language -->
+      <div id="comment-warning-box" class="warning-alert visually-hidden" role="alert">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="comment-warning-text">Your comment contains inappropriate or restricted terms. Please revise your message.</span>
+      </div>
+
+      <!-- New Comment Form -->
+      <form id="comment-form" class="comment-compose-form">
+        <div class="form-row">
+          <input type="text" id="commenter-name" placeholder="Your name or alias" maxlength="32" required class="form-input">
+        </div>
+        <div class="form-row">
+          <textarea id="commenter-text" placeholder="Share your constructive thoughts on this stream..." rows="3" maxlength="500" required class="form-textarea"></textarea>
+        </div>
+        <div class="form-actions-row">
+          <span class="char-counter" id="char-counter">0 / 500</span>
+          <button type="submit" class="glass-btn btn-primary">Post Comment</button>
+        </div>
+      </form>
+
+      <!-- Comments Stream List -->
+      <div class="comments-list" id="comments-list" aria-live="polite">
+        <!-- Rendered safely through script.js DOM text nodes -->
+      </div>
+      
+      <p class="comments-disclaimer">
+        * Static demo comments are stored locally. For team and production use, integrate a dedicated backend (such as Supabase or Firebase) with row-level security and server-side verification.
+      </p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>FISOMOVIE PLAYER &bull; Engineered with Apple Liquid Glass UI &bull; No trackers &bull; Open Source</p>
+    </footer>
+
   </div>
 
-  <script src="/script.js" defer></script>
+  <!-- Main Application Controller -->
+  <script src="script.js"></script>
 </body>
 </html>
