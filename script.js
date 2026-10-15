@@ -4,28 +4,43 @@
 (() => {
   "use strict";
 
-  /* ---------- Tiny helpers ---------- */
-  const $  = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const $  = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  /* ---------- Constants ---------- */
+  /* ---------- Config ---------- */
   const HLS_CDN = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
   const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const ASPECTS = [
-    { id: "fit",  label: "Fit",       css: "contain", scale: 1 },
-    { id: "fill", label: "Fill",      css: "cover",   scale: 1 },
-    { id: "zoom", label: "Zoom 16:9", css: "cover",   scale: 1.08 },
+    { id: "fit",  label: "Fit",       css: "contain" },
+    { id: "fill", label: "Fill",      css: "cover" },
+    { id: "zoom", label: "Zoom 16:9", css: "cover" },
   ];
-  const PREFS_KEY = "fiso-prefs";
-  const THEME_KEY = "fiso-theme";
+
+  const PREFS_KEY  = "fiso-prefs";
+  const THEME_KEY  = "fiso-theme";
+  const ACCENT_KEY = "fiso-accent";
+  const COMMENTS_KEY = "fiso-comments";
+
+  /* Bad-word filter. Add more words here. Matches word boundaries. */
+  const BAD_WORDS = [
+    "fuck","shit","bitch","asshole","bastard","damn","cunt","dick","pussy",
+    "slut","whore","nigger","nigga","faggot","retard","cock","twat","wanker",
+    "motherfucker","bullshit","piss","crap"
+  ];
+  const BAD_RE = new RegExp("\\b(" + BAD_WORDS.join("|") + ")\\b", "i");
 
   /* ---------- DOM ---------- */
   const video       = $("#video");
+  const ambientVid  = $("#ambient-video");
   const stage       = $("#video-stage");
   const overlay     = $("#stage-overlay");
   const overlayMsg  = $("#stage-message");
   const spinner     = $("#stage-spinner");
   const bigPlay     = $("#big-play");
+  const cutModal    = $("#cut-modal");
+  const cutMessage  = $("#cut-message");
+  const cutContinue = $("#cut-continue");
+  const cutRestart  = $("#cut-restart");
 
   const playPauseBtn = $("#play-pause");
   const playIcon     = playPauseBtn.querySelector(".i-play");
@@ -50,36 +65,34 @@
   const loadBtn    = $("#load-btn");
   const pasteBtn   = $("#paste-btn");
   const urlError   = $("#url-error");
-
-  const fileInput   = $("#file-input");
-  const fileDrop    = $("#file-drop");
-  const folderBtn   = $("#folder-btn");
+  const fileInput  = $("#file-input");
+  const folderBtn  = $("#folder-btn");
   const folderInput = $("#folder-input");
 
-  const playlistEl     = $("#playlist");
-  const playlistItems  = $("#playlist-items");
-  const playlistTitle  = $("#playlist-title");
-  const playlistCount  = $("#playlist-count");
+  const playlistEl    = $("#playlist");
+  const playlistItems = $("#playlist-items");
+  const playlistCount = $("#playlist-count");
 
   const settingsBtn   = $("#settings-btn");
   const settingsPanel = $("#settings-panel");
   const settingsTitle = $("#settings-title");
   const settingsBack  = $("#settings-back");
   const settingsClose = $("#settings-close");
-  const valSpeed      = $("#val-speed");
   const valQuality    = $("#val-quality");
+  const valSpeed      = $("#val-speed");
   const valAudio      = $("#val-audio");
   const valSubs       = $("#val-subs");
   const valAspect     = $("#val-aspect");
-
-  const speedView    = $('[data-view="speed"]');
-  const qualityList  = $("#quality-list");
-  const audioList    = $("#audio-list");
-  const subsList     = $("#subs-list");
-  const aspectList   = $("#aspect-list");
-  const subtitleFile = $("#subtitle-file");
+  const speedView     = $('[data-view="speed"]');
+  const qualityList   = $("#quality-list");
+  const audioList     = $("#audio-list");
+  const subsList      = $("#subs-list");
+  const aspectList    = $("#aspect-list");
+  const subtitleFile  = $("#subtitle-file");
 
   const toggleAmbient = $("#toggle-ambient");
+  const toggleStable  = $("#toggle-stable");
+  const toggleCrop    = $("#toggle-crop");
   const toggleLoop    = $("#toggle-loop");
   const resetBtn      = $("#reset-settings");
 
@@ -88,55 +101,59 @@
   /* ---------- State ---------- */
   const state = {
     hls: null,
-    sources: [],          // { name, url, file? }
+    sources: [],
     currentIndex: -1,
-    objectUrls: [],       // blob: URLs to revoke
-    prefs: {
-      volume: 1,
-      muted: false,
-      speed: 1,
-      loop: false,
-      ambient: false,
-      aspect: "fit",
-    },
-    settingsStack: ["root"],
-    qualityLevels: [],
+    objectUrls: [],
     externalSubUrl: null,
     dragCount: 0,
-    hideTimer: null,
+    hideTimer: 0,
+    stallTimer: 0,
+    lastTime: 0,
+    audioCtx: null,
+    stableSource: null,
+    stableComp: null,
+    prefs: {
+      volume: 1, muted: false, speed: 1, loop: false,
+      ambient: false, stable: false, crop: false, aspect: "fit",
+    },
   };
 
   /* =========================================================
-     THEME
+     THEME + ACCENT
      ========================================================= */
   const themeToggle = $("#theme-toggle");
-  const storedTheme = (() => {
-    try { return localStorage.getItem(THEME_KEY); } catch { return null; }
-  })();
-  if (storedTheme === "dark" || storedTheme === "light") {
-    document.documentElement.dataset.theme = storedTheme;
-  }
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t) document.documentElement.dataset.theme = t;
+  } catch {}
   themeToggle.addEventListener("click", () => {
-    const next =
-      document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem(THEME_KEY, next); } catch {}
   });
 
-  /* =========================================================
-     TABS
-     ========================================================= */
-  $$(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      $$(".tab").forEach((t) => {
-        const on = t === tab;
-        t.classList.toggle("active", on);
-        t.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      $$(".pane").forEach((p) => {
-        p.classList.toggle("active", p.dataset.pane === tab.dataset.tab);
-      });
-    });
+  const accentPicker = $("#accent-picker");
+  const hexToRgb = (hex) => {
+    const h = hex.replace("#", "");
+    const n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const applyAccent = (hex) => {
+    document.documentElement.style.setProperty("--accent", hex);
+    const [r, g, b] = hexToRgb(hex);
+    document.documentElement.style.setProperty("--accent-glow", `rgba(${r},${g},${b},0.35)`);
+    // Slightly lighter hover
+    const lr = Math.min(255, r + 30), lg = Math.min(255, g + 30), lb = Math.min(255, b + 30);
+    document.documentElement.style.setProperty("--accent-hover", `rgb(${lr},${lg},${lb})`);
+    accentPicker.value = hex;
+  };
+  try {
+    const savedAccent = localStorage.getItem(ACCENT_KEY);
+    if (savedAccent) applyAccent(savedAccent);
+  } catch {}
+  accentPicker.addEventListener("input", () => {
+    applyAccent(accentPicker.value);
+    try { localStorage.setItem(ACCENT_KEY, accentPicker.value); } catch {}
   });
 
   /* =========================================================
@@ -152,45 +169,54 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
   };
 
-  const showOverlay = (msg, isLoading) => {
-    if (!overlay || !overlayMsg || !spinner) return;
+  const showOverlay = (msg, loading) => {
     overlay.hidden = false;
-    spinner.style.display = isLoading ? "block" : "none";
+    spinner.style.display = loading ? "block" : "none";
     overlayMsg.textContent = msg;
   };
-  const showLoading = (msg) => showOverlay(msg || "Loading…", true);
-  const showError   = (msg) => showOverlay(msg, false);
-  const hideOverlay = () => { if (overlay) overlay.hidden = true; };
+  const showLoading = (m) => showOverlay(m || "Loading…", true);
+  const showError   = (m) => showOverlay(m, false);
+  const hideOverlay = () => { overlay.hidden = true; };
 
-  const isDirectMediaUrl = (s) => {
+  const isValidUrl = (s) => {
     try {
       const u = new URL(s);
       return u.protocol === "http:" || u.protocol === "https:";
     } catch { return false; }
   };
-  const isHlsUrl = (s) => /\.m3u8(\?.*)?$/i.test(s);
+  const isHls = (s) => /\.m3u8(\?.*)?$/i.test(s);
 
-  const loadHlsLib = () => {
+  const loadHls = () => {
     if (window.Hls) return Promise.resolve(window.Hls);
-    return new Promise((resolve, reject) => {
+    return new Promise((res, rej) => {
       const s = document.createElement("script");
       s.src = HLS_CDN;
-      s.onload = () => resolve(window.Hls);
-      s.onerror = () => reject(new Error("Failed to load HLS library."));
+      s.onload = () => res(window.Hls);
+      s.onerror = () => rej(new Error("Failed to load HLS library."));
       document.head.appendChild(s);
     });
   };
 
   /* =========================================================
+     TABS
+     ========================================================= */
+  $$(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      $$(".tab").forEach((t) => {
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      $$(".pane").forEach((p) => p.classList.toggle("active", p.dataset.pane === tab.dataset.tab));
+    });
+  });
+
+  /* =========================================================
      SOURCE LOADING
      ========================================================= */
   const destroyHls = () => {
-    if (state.hls) {
-      try { state.hls.destroy(); } catch {}
-      state.hls = null;
-    }
+    if (state.hls) { try { state.hls.destroy(); } catch {} state.hls = null; }
   };
-
   const clearObjectUrls = () => {
     state.objectUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
     state.objectUrls = [];
@@ -199,7 +225,8 @@
   const applyAspect = () => {
     const a = ASPECTS.find((x) => x.id === state.prefs.aspect) || ASPECTS[0];
     video.style.objectFit = a.css;
-    video.style.transform = a.scale === 1 ? "none" : `scale(${a.scale})`;
+    ambientVid.style.objectFit = a.css;
+    video.style.transform = a.id === "zoom" ? "scale(1.08)" : "none";
   };
 
   const loadSource = async (src, { isUrl = false } = {}) => {
@@ -207,28 +234,47 @@
     video.removeAttribute("src");
     try { video.load(); } catch {}
     showLoading(isUrl ? "Fetching stream…" : "Opening file…");
+    state.lastTime = 0;
 
     try {
-      if (isUrl && isHlsUrl(src)) {
-        const Hls = await loadHlsLib();
+      if (isUrl && isHls(src)) {
+        const Hls = await loadHls();
         if (Hls.isSupported()) {
           const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
           state.hls = hls;
           hls.loadSource(src);
           hls.attachMedia(video);
+
           hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+            // Build quality list from HLS levels — YouTube-like
             state.qualityLevels = (data.levels || []).map((l, i) => ({
               id: i,
               label: l.height ? `${l.height}p` : `Level ${i + 1}`,
             }));
-            if (settingsPanel && !settingsPanel.hidden) buildQualityList();
+            buildQualityList();
           });
+
+          // HLS audio tracks are the correct place to switch languages
+          hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, (_, data) => {
+            state.hlsAudioTracks = data.audioTracks || [];
+            buildAudioList();
+          });
+          hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (_, data) => {
+            const t = state.hlsAudioTracks?.[data.id];
+            if (t && valAudio) valAudio.textContent = t.name || t.lang || "Track";
+            buildAudioList();
+          });
+
+          hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+            const q = state.qualityLevels?.[data.level];
+            if (q && valQuality) valQuality.textContent = q.label;
+          });
+
           hls.on(Hls.Events.ERROR, (_, data) => {
             if (!data.fatal) return;
-            const msg =
-              data.type === "networkError"
-                ? "Network error. The stream may be offline, CORS-blocked, or expired."
-                : "The HLS stream could not be played.";
+            const msg = data.type === "networkError"
+              ? "Network error. The stream may be offline, CORS-blocked, or expired."
+              : "The HLS stream could not be played.";
             showError(msg);
           });
           return;
@@ -242,6 +288,8 @@
 
       video.src = src;
       video.load();
+      // Native audio-track detection fallback
+      setTimeout(() => buildAudioList(), 400);
     } catch (err) {
       showError(err.message || "Could not load the source.");
     }
@@ -256,14 +304,11 @@
     if (!val) {
       urlError.textContent = "Please paste a video URL.";
       urlError.hidden = false;
-      urlInput.focus();
-      return;
+      urlInput.focus(); return;
     }
-    if (!isDirectMediaUrl(val)) {
-      urlError.textContent =
-        "That doesn't look like a valid media URL. Use a direct link to a video file or an HLS .m3u8 stream.";
-      urlError.hidden = false;
-      return;
+    if (!isValidUrl(val)) {
+      urlError.textContent = "That doesn't look like a valid media URL. Use a direct link to a video file or HLS .m3u8 stream.";
+      urlError.hidden = false; return;
     }
     loadBtn.disabled = true;
     try {
@@ -278,19 +323,13 @@
     if (e.key === "Enter") { e.preventDefault(); loadBtn.click(); }
   });
 
-  /* Paste button — only if the Clipboard API is available. */
   if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
     pasteBtn.hidden = false;
     pasteBtn.addEventListener("click", async () => {
       try {
         const text = (await navigator.clipboard.readText()).trim();
-        if (text) {
-          urlInput.value = text;
-          urlInput.focus();
-        }
-      } catch {
-        urlInput.focus();
-      }
+        if (text) { urlInput.value = text; urlInput.focus(); }
+      } catch { urlInput.focus(); }
     });
   }
 
@@ -299,26 +338,21 @@
      ========================================================= */
   const isPlayableFile = (f) => {
     const name = (f.name || "").toLowerCase();
-    if (f.type && (f.type.startsWith("video/") || f.type.startsWith("audio/"))) {
-      return true;
-    }
+    if (f.type && (f.type.startsWith("video/") || f.type.startsWith("audio/"))) return true;
     return /\.(mp4|m4v|webm|mkv|mov|avi|flv|ts|m2ts|mp3|m4a|aac|flac|wav|ogg|oga|opus)$/.test(name);
   };
-
   const naturalSort = (a, b) =>
     a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 
   const setPlaylist = (files) => {
     const vids = files.filter(isPlayableFile).sort(naturalSort);
     if (!vids.length) return;
-
     clearObjectUrls();
     clearPlaylist();
-
     state.sources = vids.map((f) => {
       const url = URL.createObjectURL(f);
       state.objectUrls.push(url);
-      return { name: f.name, url, file: f };
+      return { name: f.name, url };
     });
     renderPlaylist();
     playIndex(0);
@@ -333,26 +367,17 @@
   };
 
   const renderPlaylist = () => {
-    if (!playlistEl || !playlistItems) return;
     playlistEl.hidden = state.sources.length <= 1;
     playlistItems.innerHTML = "";
     playlistCount.textContent = String(state.sources.length);
-    if (state.sources.length > 1 && playlistTitle) {
-      playlistTitle.textContent = "Playlist";
-    }
     state.sources.forEach((src, i) => {
       const li = document.createElement("li");
       li.dataset.index = String(i);
       if (i === state.currentIndex) li.classList.add("active");
-
       const idx = document.createElement("span");
-      idx.className = "idx";
-      idx.textContent = String(i + 1);
-
+      idx.className = "idx"; idx.textContent = String(i + 1);
       const name = document.createElement("span");
-      name.className = "name";
-      name.textContent = src.name;
-
+      name.className = "name"; name.textContent = src.name;
       li.append(idx, name);
       li.addEventListener("click", () => playIndex(i));
       playlistItems.appendChild(li);
@@ -363,26 +388,23 @@
     if (i < 0 || i >= state.sources.length) return;
     state.currentIndex = i;
     $$(".playlist li").forEach((li) =>
-      li.classList.toggle("active", Number(li.dataset.index) === i)
-    );
+      li.classList.toggle("active", Number(li.dataset.index) === i));
     const src = state.sources[i];
-    await loadSource(src.url, { isUrl: false });
+    await loadSource(src.url);
     video.play().catch(() => {});
   };
 
-  fileInput?.addEventListener("change", (e) => {
+  fileInput.addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) setPlaylist(files);
     fileInput.value = "";
   });
-
-  folderInput?.addEventListener("change", (e) => {
+  folderInput.addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) setPlaylist(files);
     folderInput.value = "";
   });
-
-  folderBtn?.addEventListener("click", async () => {
+  folderBtn.addEventListener("click", async () => {
     if ("showDirectoryPicker" in window) {
       try {
         const dir = await window.showDirectoryPicker();
@@ -398,106 +420,102 @@
       } catch (err) {
         if (err && err.name !== "AbortError") folderInput.click();
       }
-    } else {
-      folderInput.click();
-    }
+    } else folderInput.click();
   });
 
   /* =========================================================
      DRAG & DROP
      ========================================================= */
-  const showDropOverlay = () => { if (dropOverlay) dropOverlay.hidden = false; };
-  const hideDropOverlay = () => { if (dropOverlay) dropOverlay.hidden = true; };
-
   document.addEventListener("dragenter", (e) => {
     if (!e.dataTransfer) return;
     const types = Array.from(e.dataTransfer.types || []);
     if (!types.includes("Files")) return;
     e.preventDefault();
     state.dragCount++;
-    showDropOverlay();
+    dropOverlay.hidden = false;
   });
-  document.addEventListener("dragover", (e) => {
-    if (e.dataTransfer) e.preventDefault();
-  });
+  document.addEventListener("dragover", (e) => { if (e.dataTransfer) e.preventDefault(); });
   document.addEventListener("dragleave", (e) => {
     if (!e.dataTransfer) return;
     e.preventDefault();
     state.dragCount = Math.max(0, state.dragCount - 1);
-    if (state.dragCount === 0) hideDropOverlay();
+    if (state.dragCount === 0) dropOverlay.hidden = true;
   });
   document.addEventListener("drop", (e) => {
     e.preventDefault();
     state.dragCount = 0;
-    hideDropOverlay();
+    dropOverlay.hidden = true;
     const files = Array.from(e.dataTransfer?.files || []);
     if (files.length) setPlaylist(files);
   });
 
   /* =========================================================
-     PLAYER CONTROLS
+     PLAYER CONTROLS — the play/pause fix
      ========================================================= */
   const updatePlayPauseUI = () => {
     const playing = !video.paused && !video.ended;
-    if (playIcon) playIcon.hidden = playing;
-    if (pauseIcon) pauseIcon.hidden = !playing;
+    // FIX: use style.display directly. Hidden attribute works too, but
+    // for the two icons inside one button we just toggle a class.
+    playIcon.hidden = playing;
+    pauseIcon.hidden = !playing;
     playPauseBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
-    if (bigPlay) {
-      const showBig = !playing && !!video.src && !video.ended;
-      bigPlay.hidden = !showBig;
-    }
+    if (bigPlay) bigPlay.hidden = playing || !video.src || video.ended;
   };
 
+  // FIX: single source of truth for play/pause.
   const togglePlay = () => {
     if (!video.src) return;
-    if (video.paused) video.play().catch(() => {});
-    else video.pause();
+    if (video.paused || video.ended) {
+      video.play().catch((err) => console.warn("Play failed:", err));
+    } else {
+      video.pause();
+    }
   };
-
   playPauseBtn.addEventListener("click", togglePlay);
-  bigPlay?.addEventListener("click", togglePlay);
+  bigPlay.addEventListener("click", togglePlay);
+
+  // Listen to ALL the events that change play state
+  ["play", "playing", "pause", "ended", "loadedmetadata", "emptied"].forEach((ev) => {
+    video.addEventListener(ev, updatePlayPauseUI);
+  });
 
   skipBack.addEventListener("click", () => {
     video.currentTime = Math.max(0, video.currentTime - 10);
   });
   skipFwd.addEventListener("click", () => {
-    video.currentTime = Math.min(
-      video.duration || Infinity,
-      video.currentTime + 10
-    );
+    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
   });
 
   /* Volume */
   const updateVolumeUI = () => {
     const muted = video.muted || video.volume === 0;
-    if (volIcon) volIcon.hidden = muted;
-    if (muteIcon) muteIcon.hidden = !muted;
+    volIcon.hidden = muted;
+    muteIcon.hidden = !muted;
     muteBtn.setAttribute("aria-label", muted ? "Unmute" : "Mute");
-    if (volSlider) volSlider.value = String(muted ? 0 : video.volume);
+    volSlider.value = String(muted ? 0 : video.volume);
   };
-  muteBtn.addEventListener("click", () => {
-    video.muted = !video.muted;
-    updateVolumeUI();
-  });
-  volSlider?.addEventListener("input", () => {
+  muteBtn.addEventListener("click", () => { video.muted = !video.muted; updateVolumeUI(); });
+  volSlider.addEventListener("input", () => {
     video.volume = Number(volSlider.value);
     video.muted = video.volume === 0;
     updateVolumeUI();
   });
-  video.addEventListener("volumechange", updateVolumeUI);
+  video.addEventListener("volumechange", () => {
+    updateVolumeUI();
+    state.prefs.volume = video.muted ? 0 : video.volume;
+    state.prefs.muted = video.muted;
+    savePrefs();
+  });
 
   /* Fullscreen */
   fsBtn.addEventListener("click", () => {
-    if (!document.fullscreenElement) {
-      stage.requestFullscreen?.().catch(() => {});
-    } else {
-      document.exitFullscreen?.();
-    }
+    if (!document.fullscreenElement) stage.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.();
   });
   document.addEventListener("fullscreenchange", () => {
     const isFs = !!document.fullscreenElement;
-    if (fsIcon) fsIcon.hidden = isFs;
-    if (fsExitIcon) fsExitIcon.hidden = !isFs;
+    fsIcon.hidden = isFs;
+    fsExitIcon.hidden = !isFs;
   });
 
   /* PiP */
@@ -505,39 +523,32 @@
     pipBtn.hidden = false;
     pipBtn.addEventListener("click", async () => {
       try {
-        if (document.pictureInPictureElement) {
-          await document.exitPictureInPicture();
-        } else {
-          await video.requestPictureInPicture();
-        }
+        if (document.pictureInPictureElement) await document.exitPictureInPicture();
+        else await video.requestPictureInPicture();
       } catch {}
     });
   }
 
-  /* ---------- Progress ---------- */
+  /* Progress */
   const updateProgress = () => {
     const d = video.duration;
     if (!isFinite(d) || d <= 0) {
-      if (playedBar) playedBar.style.width = "0%";
-      if (curTimeEl) curTimeEl.textContent = "0:00";
-      if (durTimeEl) durTimeEl.textContent = "0:00";
+      playedBar.style.width = "0%";
+      curTimeEl.textContent = "0:00";
+      durTimeEl.textContent = "0:00";
       return;
     }
-    const pct = (video.currentTime / d) * 100;
-    if (playedBar) playedBar.style.width = pct + "%";
-    if (curTimeEl) curTimeEl.textContent = fmtTime(video.currentTime);
-    if (durTimeEl) durTimeEl.textContent = fmtTime(d);
-
-    if (video.buffered.length && bufferBar) {
+    playedBar.style.width = (video.currentTime / d) * 100 + "%";
+    curTimeEl.textContent = fmtTime(video.currentTime);
+    durTimeEl.textContent = fmtTime(d);
+    if (video.buffered.length) {
       const end = video.buffered.end(video.buffered.length - 1);
       bufferBar.style.width = Math.min(100, (end / d) * 100) + "%";
     }
-
-    if (seek && document.activeElement !== seek) {
+    if (document.activeElement !== seek) {
       seek.value = String(Math.round((video.currentTime / d) * 1000));
     }
   };
-
   video.addEventListener("timeupdate", updateProgress);
   video.addEventListener("progress", updateProgress);
   video.addEventListener("durationchange", updateProgress);
@@ -548,21 +559,18 @@
     updatePlayPauseUI();
   });
 
-  seek?.addEventListener("input", () => {
+  seek.addEventListener("input", () => {
     const d = video.duration;
     if (!isFinite(d) || d <= 0) return;
     const t = (Number(seek.value) / 1000) * d;
     video.currentTime = t;
-    if (playedBar) playedBar.style.width = ((t / d) * 100) + "%";
-    if (curTimeEl) curTimeEl.textContent = fmtTime(t);
+    playedBar.style.width = (t / d) * 100 + "%";
+    curTimeEl.textContent = fmtTime(t);
   });
 
-  video.addEventListener("playing", () => { hideOverlay(); updatePlayPauseUI(); });
-  video.addEventListener("pause",   updatePlayPauseUI);
-  video.addEventListener("play",    updatePlayPauseUI);
-  video.addEventListener("ended",   updatePlayPauseUI);
-  video.addEventListener("waiting", () => showLoading("Buffering…"));
+  video.addEventListener("playing", hideOverlay);
   video.addEventListener("canplay", hideOverlay);
+  video.addEventListener("waiting", () => showLoading("Buffering…"));
   video.addEventListener("error", () => {
     const codes = {
       1: "Playback aborted.",
@@ -580,12 +588,57 @@
     }
   });
 
-  /* ---------- Keyboard shortcuts ---------- */
+  /* =========================================================
+     CUT-OFF / STALL DETECTION
+     Continue from here, or Restart.
+     ========================================================= */
+  const showCutModal = (msg) => {
+    cutMessage.textContent = msg || "The video stream was cut or the network dropped.";
+    cutModal.hidden = false;
+  };
+  const hideCutModal = () => { cutModal.hidden = true; };
+
+  cutContinue.addEventListener("click", () => {
+    hideCutModal();
+    // Try to resume from where we were
+    if (state.lastTime > 0) video.currentTime = state.lastTime;
+    video.play().catch(() => {});
+  });
+  cutRestart.addEventListener("click", () => {
+    hideCutModal();
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  });
+
+  // Track "last good time"
+  video.addEventListener("timeupdate", () => {
+    if (!video.paused && video.readyState >= 2) {
+      state.lastTime = video.currentTime;
+      clearTimeout(state.stallTimer);
+      // Watch for stalls: if no timeupdate for 12s while playing → cut modal
+      state.stallTimer = setTimeout(() => {
+        if (!video.paused && !video.ended && video.readyState < 3) {
+          showCutModal("Playback looks stalled. Network drop or stream cut?");
+        }
+      }, 12000);
+    }
+  });
+  video.addEventListener("play", () => { hideCutModal(); });
+  video.addEventListener("pause", () => { clearTimeout(state.stallTimer); });
+  video.addEventListener("ended", () => { clearTimeout(state.stallTimer); });
+
+  // Hard error while playing → cut modal
+  video.addEventListener("error", () => {
+    if (!video.paused) showCutModal("The stream was cut. What would you like to do?");
+  });
+
+  /* =========================================================
+     KEYBOARD SHORTCUTS
+     ========================================================= */
   document.addEventListener("keydown", (e) => {
     const t = e.target;
     if (t && (t.matches?.("input, textarea, select") || t.isContentEditable)) return;
     if (!video.src) return;
-
     const k = e.key;
     if (k === " " || k === "k") { e.preventDefault(); togglePlay(); }
     else if (k === "ArrowLeft")  { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); }
@@ -598,21 +651,20 @@
     else if (k === "ArrowDown") { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); updateVolumeUI(); }
   });
 
-  /* ---------- Auto-hide controls ---------- */
+  /* =========================================================
+     AUTO-HIDE CONTROLS
+     ========================================================= */
   const scheduleHide = () => {
     clearTimeout(state.hideTimer);
     if (video.paused) return;
-    state.hideTimer = setTimeout(() => {
-      stage.classList.add("controls-hidden");
-    }, 2600);
+    state.hideTimer = setTimeout(() => stage.classList.add("controls-hidden"), 2600);
   };
   const showControls = () => {
     stage.classList.remove("controls-hidden");
     scheduleHide();
   };
   ["mousemove", "touchstart", "click", "keydown"].forEach((ev) =>
-    stage.addEventListener(ev, showControls, { passive: true })
-  );
+    stage.addEventListener(ev, showControls, { passive: true }));
   video.addEventListener("play", scheduleHide);
   video.addEventListener("pause", () => {
     clearTimeout(state.hideTimer);
@@ -623,77 +675,52 @@
      SETTINGS MENU
      ========================================================= */
   const showView = (view) => {
-    state.settingsStack = view === "root" ? ["root"] : ["root", view];
-    $$(".settings-view", settingsPanel).forEach((v) => {
-      v.hidden = v.dataset.view !== view;
-    });
+    $$(".settings-view", settingsPanel).forEach((v) => v.hidden = v.dataset.view !== view);
     settingsBack.hidden = view === "root";
-    const titles = {
-      root: "Settings",
-      speed: "Playback speed",
-      quality: "Quality",
-      audio: "Audio track",
-      subs: "Subtitles",
-      aspect: "Aspect ratio",
-    };
+    const titles = { root: "Settings", speed: "Playback speed", quality: "Quality", audio: "Audio track", subs: "Subtitles", aspect: "Aspect" };
     settingsTitle.textContent = titles[view] || "Settings";
   };
-
-  const openSettings = () => {
-    settingsPanel.hidden = false;
-    settingsBtn.setAttribute("aria-expanded", "true");
-    showView("root");
-  };
-  const closeSettings = () => {
-    settingsPanel.hidden = true;
-    settingsBtn.setAttribute("aria-expanded", "false");
-  };
+  const openSettings  = () => { settingsPanel.hidden = false; settingsBtn.setAttribute("aria-expanded", "true"); showView("root"); };
+  const closeSettings = () => { settingsPanel.hidden = true;  settingsBtn.setAttribute("aria-expanded", "false"); };
 
   settingsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (settingsPanel.hidden) openSettings();
-    else closeSettings();
+    settingsPanel.hidden ? openSettings() : closeSettings();
   });
   settingsClose.addEventListener("click", closeSettings);
   settingsBack.addEventListener("click", () => showView("root"));
-
   document.addEventListener("click", (e) => {
     if (settingsPanel.hidden) return;
-    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
-      closeSettings();
-    }
+    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) closeSettings();
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !settingsPanel.hidden) closeSettings();
   });
-
   $$("[data-open]", settingsPanel).forEach((btn) => {
     btn.addEventListener("click", () => {
-      const view = btn.dataset.open;
-      if (view === "speed")    buildSpeedList();
-      else if (view === "quality") buildQualityList();
-      else if (view === "audio")   buildAudioList();
-      else if (view === "subs")    buildSubsList();
-      else if (view === "aspect")  buildAspectList();
-      showView(view);
+      const v = btn.dataset.open;
+      if (v === "speed")    buildSpeedList();
+      if (v === "quality")  buildQualityList();
+      if (v === "audio")    buildAudioList();
+      if (v === "subs")     buildSubsList();
+      if (v === "aspect")   buildAspectList();
+      showView(v);
     });
   });
 
   /* ---------- Speed ---------- */
   const buildSpeedList = () => {
-    if (!speedView) return;
     speedView.innerHTML = "";
     SPEEDS.forEach((s) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "choice" + (s === state.prefs.speed ? " selected" : "");
-      btn.innerHTML = `
-        <span>${s}×</span>
+      btn.innerHTML = `<span>${s}×</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", () => {
         state.prefs.speed = s;
         video.playbackRate = s;
-        if (valSpeed) valSpeed.textContent = s + "×";
+        valSpeed.textContent = s + "×";
         savePrefs();
         buildSpeedList();
       });
@@ -701,179 +728,199 @@
     });
   };
 
-  /* ---------- Quality ---------- */
+  /* ---------- Quality (YouTube-like) ---------- */
   const buildQualityList = () => {
     if (!qualityList) return;
     qualityList.innerHTML = "";
 
-    const addChoice = (id, label, selected, disabled, onClick) => {
+    const addChoice = (label, selected, disabled, onClick) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className =
-        "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+      btn.className = "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
       btn.disabled = !!disabled;
-      btn.innerHTML = `
-        <span>${label}</span>
+      btn.innerHTML = `<span>${label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", onClick);
       qualityList.appendChild(btn);
     };
 
-    if (!state.hls) {
-      addChoice("single", "Single quality (source file)", true, true, () => {});
-      if (valQuality) valQuality.textContent = "Auto";
+    // HLS: real quality levels
+    if (state.hls) {
+      const cur = state.hls.currentLevel;
+      addChoice("Auto", cur === -1, false, () => {
+        state.hls.currentLevel = -1;
+        valQuality.textContent = "Auto";
+        buildQualityList();
+      });
+      (state.qualityLevels || []).forEach((q) => {
+        addChoice(q.label, cur === q.id, false, () => {
+          state.hls.currentLevel = q.id;
+          valQuality.textContent = q.label;
+          buildQualityList();
+        });
+      });
       return;
     }
 
-    const current = state.hls.currentLevel;
-    addChoice("auto", "Auto", current === -1, false, () => {
-      state.hls.currentLevel = -1;
-      if (valQuality) valQuality.textContent = "Auto";
+    // Native: read video.videoHeight and try to build a "current" label.
+    // We can't actually switch quality on a single MP4, but we still
+    // show the option so the UI matches YouTube and explains why.
+    const h = video.videoHeight;
+    const currentLabel = h ? `${h}p` : "Auto";
+    if (valQuality) valQuality.textContent = currentLabel;
+
+    addChoice(currentLabel + " (current)", true, false, () => {});
+    addChoice("Auto (source decides)", false, false, () => {
+      valQuality.textContent = "Auto";
       buildQualityList();
     });
-    state.qualityLevels.forEach((q) => {
-      addChoice(q.id, q.label, current === q.id, false, () => {
-        state.hls.currentLevel = q.id;
-        if (valQuality) valQuality.textContent = q.label;
-        buildQualityList();
-      });
-    });
+    const note = document.createElement("p");
+    note.className = "settings-note";
+    note.textContent = "This source is a single-quality file. To switch quality, load an HLS .m3u8 stream or a multi-bitrate source.";
+    qualityList.appendChild(note);
   };
 
-  /* ---------- Audio tracks ---------- */
+  /* ---------- Audio tracks (HLS + native) ---------- */
   const buildAudioList = () => {
     if (!audioList) return;
     audioList.innerHTML = "";
-    const tracks = video.audioTracks ? Array.from(video.audioTracks) : [];
-    if (!tracks.length) {
-      const p = document.createElement("p");
-      p.className = "settings-note";
-      p.textContent =
-        "This browser/media does not expose multiple audio tracks. Switching tracks requires an implementation that supports it.";
-      audioList.appendChild(p);
-      if (valAudio) valAudio.textContent = "Default";
-      return;
-    }
-    tracks.forEach((t, i) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "choice" + (t.enabled ? " selected" : "");
-      btn.innerHTML = `
-        <span>${t.label || t.language || "Track " + (i + 1)}</span>
-        <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
-      btn.addEventListener("click", () => {
-        tracks.forEach((x) => (x.enabled = x === t));
-        if (valAudio) valAudio.textContent = t.label || t.language || `Track ${i + 1}`;
-        buildAudioList();
-      });
-      audioList.appendChild(btn);
-    });
-  };
-
-  /* ---------- Subtitles ---------- */
-  const hasActiveSub = () =>
-    Array.from(video.textTracks || []).some((t) => t.mode === "showing");
-
-  const disableAllSubs = () => {
-    Array.from(video.textTracks || []).forEach((t) => (t.mode = "disabled"));
-  };
-
-  const buildSubsList = () => {
-    if (!subsList) return;
-    subsList.innerHTML = "";
 
     const addChoice = (label, selected, disabled, onClick) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className =
-        "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+      btn.className = "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
       btn.disabled = !!disabled;
-      btn.innerHTML = `
-        <span>${label}</span>
+      btn.innerHTML = `<span>${label}</span>
+        <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      btn.addEventListener("click", onClick);
+      audioList.appendChild(btn);
+    };
+
+    // 1. HLS.js audio tracks (this actually works)
+    if (state.hls && state.hlsAudioTracks && state.hlsAudioTracks.length) {
+      const cur = state.hls.audioTrack;
+      state.hlsAudioTracks.forEach((t, i) => {
+        const label = [t.name, t.lang, t.channels ? `${t.channels}ch` : ""].filter(Boolean).join(" · ") || `Track ${i + 1}`;
+        addChoice(label, cur === i, false, () => {
+          state.hls.audioTrack = i;
+          valAudio.textContent = label;
+          buildAudioList();
+        });
+      });
+      const note = document.createElement("p");
+      note.className = "settings-note";
+      note.textContent = `${state.hlsAudioTracks.length} audio track${state.hlsAudioTracks.length === 1 ? "" : "s"} available`;
+      audioList.appendChild(note);
+      return;
+    }
+
+    // 2. Native video.audioTracks (Safari and some Chromium builds)
+    const nativeTracks = video.audioTracks ? Array.from(video.audioTracks) : [];
+    if (nativeTracks.length > 1) {
+      nativeTracks.forEach((t, i) => {
+        const label = [t.label, t.language, t.kind].filter(Boolean).join(" · ") || `Track ${i + 1}`;
+        addChoice(label, t.enabled, false, () => {
+          nativeTracks.forEach((x) => (x.enabled = x === t));
+          valAudio.textContent = label;
+          buildAudioList();
+        });
+      });
+      const note = document.createElement("p");
+      note.className = "settings-note";
+      note.textContent = `${nativeTracks.length} audio tracks available`;
+      audioList.appendChild(note);
+      return;
+    }
+
+    // 3. Nothing exposed
+    const p = document.createElement("p");
+    p.className = "settings-note";
+    p.textContent = "Audio track switching isn't supported for this source in your browser. It works on HLS .m3u8 streams and on browsers that expose the audioTracks API (Safari, some Chromium builds).";
+    audioList.appendChild(p);
+    if (valAudio) valAudio.textContent = "Default";
+  };
+
+  /* ---------- Subtitles ---------- */
+  const hasActiveSub = () => Array.from(video.textTracks || []).some((t) => t.mode === "showing");
+  const disableAllSubs = () => Array.from(video.textTracks || []).forEach((t) => (t.mode = "disabled"));
+
+  const buildSubsList = () => {
+    if (!subsList) return;
+    subsList.innerHTML = "";
+    const addChoice = (label, selected, disabled, onClick) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+      btn.disabled = !!disabled;
+      btn.innerHTML = `<span>${label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", onClick);
       subsList.appendChild(btn);
     };
-
     addChoice("Off", !hasActiveSub(), false, () => {
       disableAllSubs();
-      if (valSubs) valSubs.textContent = "Off";
+      valSubs.textContent = "Off";
       buildSubsList();
     });
-
-    const textTracks = Array.from(video.textTracks || []).filter(
-      (t) => t.kind === "subtitles" || t.kind === "captions"
-    );
-
-    if (textTracks.length) {
-      textTracks.forEach((t, i) => {
+    const tracks = Array.from(video.textTracks || []).filter((t) => t.kind === "subtitles" || t.kind === "captions");
+    if (tracks.length) {
+      tracks.forEach((t, i) => {
         const label = t.label || t.language || `Track ${i + 1}`;
         addChoice(label, t.mode === "showing", false, () => {
-          textTracks.forEach((x) => (x.mode = x === t ? "showing" : "disabled"));
-          if (valSubs) valSubs.textContent = label;
+          tracks.forEach((x) => (x.mode = x === t ? "showing" : "disabled"));
+          valSubs.textContent = label;
           buildSubsList();
         });
       });
     } else {
       const p = document.createElement("p");
       p.className = "settings-note";
-      p.textContent =
-        "No embedded subtitle tracks found. Load an external .vtt file below.";
+      p.textContent = "No embedded subtitle tracks found. Load an external .vtt file below.";
       subsList.appendChild(p);
     }
   };
 
-  subtitleFile?.addEventListener("change", (e) => {
+  subtitleFile.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!/\.vtt$/i.test(f.name)) {
-      alert(
-        "Only WebVTT (.vtt) files are supported natively. Convert .srt / .ass first."
-      );
+      alert("Only WebVTT (.vtt) files are supported natively. Convert .srt / .ass first.");
       subtitleFile.value = "";
       return;
     }
     const url = URL.createObjectURL(f);
     if (state.externalSubUrl) URL.revokeObjectURL(state.externalSubUrl);
     state.externalSubUrl = url;
-
     $$("track[data-external]", video).forEach((t) => t.remove());
     const track = document.createElement("track");
-    track.kind = "subtitles";
-    track.label = f.name;
-    track.srclang = "en";
-    track.src = url;
-    track.default = true;
-    track.dataset.external = "true";
+    track.kind = "subtitles"; track.label = f.name; track.srclang = "en";
+    track.src = url; track.default = true; track.dataset.external = "true";
     video.appendChild(track);
-
     setTimeout(() => {
       const tt = Array.from(video.textTracks).find((t) => t.label === f.name);
       if (tt) {
         Array.from(video.textTracks).forEach((t) => (t.mode = "disabled"));
         tt.mode = "showing";
-        if (valSubs) valSubs.textContent = f.name;
+        valSubs.textContent = f.name;
       }
       buildSubsList();
     }, 100);
     subtitleFile.value = "";
   });
 
-  /* ---------- Aspect ratio ---------- */
+  /* ---------- Aspect ---------- */
   const buildAspectList = () => {
-    if (!aspectList) return;
     aspectList.innerHTML = "";
     ASPECTS.forEach((a) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "choice" + (a.id === state.prefs.aspect ? " selected" : "");
-      btn.innerHTML = `
-        <span>${a.label}</span>
+      btn.innerHTML = `<span>${a.label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", () => {
         state.prefs.aspect = a.id;
         applyAspect();
-        if (valAspect) valAspect.textContent = a.label;
+        valAspect.textContent = a.label;
         savePrefs();
         buildAspectList();
       });
@@ -881,38 +928,107 @@
     });
   };
 
-  /* ---------- Ambient / Loop / Reset ---------- */
-  toggleAmbient?.addEventListener("change", () => {
+  /* ---------- Ambient mode (blurred clone) ---------- */
+  let ambientSyncRaf = null;
+  const syncAmbient = () => {
+    if (ambientVid.src !== video.src && video.src) {
+      ambientVid.src = video.src;
+    }
+    ambientVid.currentTime = video.currentTime;
+    ambientVid.playbackRate = video.playbackRate;
+    if (video.paused) ambientVid.pause();
+    else ambientVid.play().catch(() => {});
+    if (state.prefs.ambient) {
+      ambientSyncRaf = requestAnimationFrame(syncAmbient);
+    }
+  };
+  toggleAmbient.addEventListener("change", () => {
     state.prefs.ambient = toggleAmbient.checked;
     stage.classList.toggle("ambient-on", state.prefs.ambient);
+    if (state.prefs.ambient) {
+      syncAmbient();
+    } else {
+      cancelAnimationFrame(ambientSyncRaf);
+      ambientVid.pause();
+    }
     savePrefs();
   });
-  toggleLoop?.addEventListener("change", () => {
+
+  /* ---------- Stable volume (Web Audio compressor) ---------- */
+  const initStableVolume = () => {
+    if (state.stableSource) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = state.audioCtx || (state.audioCtx = new Ctx());
+      const source = ctx.createMediaElementSource(video);
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -24;
+      comp.knee.value = 20;
+      comp.ratio.value = 6;
+      comp.attack.value = 0.005;
+      comp.release.value = 0.25;
+      source.connect(comp).connect(ctx.destination);
+      state.stableSource = source;
+      state.stableComp = comp;
+      ctx.resume().catch(() => {});
+    } catch (err) {
+      console.warn("Stable volume init failed:", err);
+    }
+  };
+  toggleStable.addEventListener("change", () => {
+    state.prefs.stable = toggleStable.checked;
+    if (state.prefs.stable) initStableVolume();
+    if (state.stableComp) {
+      state.stableComp.ratio.value = state.prefs.stable ? 6 : 1;
+      state.stableComp.threshold.value = state.prefs.stable ? -24 : 0;
+    }
+    savePrefs();
+  });
+
+  /* ---------- Crop black bars ---------- */
+  toggleCrop.addEventListener("change", () => {
+    state.prefs.crop = toggleCrop.checked;
+    stage.classList.toggle("crop-black", state.prefs.crop);
+    video.style.transform = state.prefs.crop
+      ? "scale(1.06)"
+      : (state.prefs.aspect === "zoom" ? "scale(1.08)" : "none");
+    savePrefs();
+  });
+
+  /* ---------- Loop ---------- */
+  toggleLoop.addEventListener("change", () => {
     state.prefs.loop = toggleLoop.checked;
+    video.loop = state.prefs.loop;
     savePrefs();
   });
-  resetBtn?.addEventListener("click", () => {
-    state.prefs.speed = 1;
-    state.prefs.aspect = "fit";
-    state.prefs.loop = false;
-    state.prefs.ambient = false;
+
+  /* ---------- Reset ---------- */
+  resetBtn.addEventListener("click", () => {
+    Object.assign(state.prefs, { speed: 1, aspect: "fit", loop: false, ambient: false, stable: false, crop: false });
     video.playbackRate = 1;
+    video.loop = false;
     applyAspect();
-    if (toggleLoop) toggleLoop.checked = false;
-    if (toggleAmbient) toggleAmbient.checked = false;
-    if (valSpeed) valSpeed.textContent = "1×";
-    if (valAspect) valAspect.textContent = "Fit";
+    video.style.transform = "none";
+    toggleLoop.checked = false;
+    toggleAmbient.checked = false;
+    toggleStable.checked = false;
+    toggleCrop.checked = false;
+    stage.classList.remove("ambient-on", "crop-black");
+    cancelAnimationFrame(ambientSyncRaf);
+    ambientVid.pause();
+    valSpeed.textContent = "1×";
+    valAspect.textContent = "Fit";
     savePrefs();
     closeSettings();
   });
 
   /* =========================================================
-     PREFS PERSISTENCE
+     PREFS
      ========================================================= */
   const savePrefs = () => {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch {}
   };
-
   const loadPrefs = () => {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
@@ -921,17 +1037,145 @@
     video.volume = state.prefs.volume;
     video.muted = state.prefs.muted;
     video.playbackRate = state.prefs.speed;
-    if (toggleLoop) toggleLoop.checked = state.prefs.loop;
-    if (toggleAmbient) toggleAmbient.checked = state.prefs.ambient;
+    video.loop = state.prefs.loop;
+    toggleLoop.checked = state.prefs.loop;
+    toggleAmbient.checked = state.prefs.ambient;
+    toggleStable.checked = state.prefs.stable;
+    toggleCrop.checked = state.prefs.crop;
     stage.classList.toggle("ambient-on", state.prefs.ambient);
-    if (valSpeed) valSpeed.textContent = state.prefs.speed + "×";
-    if (valAspect) {
-      valAspect.textContent =
-        (ASPECTS.find((a) => a.id === state.prefs.aspect) || ASPECTS[0]).label;
-    }
+    stage.classList.toggle("crop-black", state.prefs.crop);
+    valSpeed.textContent = state.prefs.speed + "×";
+    valAspect.textContent = (ASPECTS.find((a) => a.id === state.prefs.aspect) || ASPECTS[0]).label;
     applyAspect();
     updateVolumeUI();
   };
+
+  /* =========================================================
+     COMMENTS (localStorage + bad-word filter)
+     ========================================================= */
+  const commentForm = $("#comment-form");
+  const commentName = $("#comment-name");
+  const commentBody = $("#comment-body");
+  const commentCounter = $("#comment-count");
+  const commentSubmit = $("#comment-submit");
+  const commentStatus = $("#comment-status");
+  const commentList = $("#comment-list");
+
+  const loadComments = () => {
+    try { return JSON.parse(localStorage.getItem(COMMENTS_KEY) || "[]"); }
+    catch { return []; }
+  };
+  const saveComments = (arr) => {
+    try { localStorage.setItem(COMMENTS_KEY, JSON.stringify(arr)); } catch {}
+  };
+
+  const relTime = (ms) => {
+    const diff = Date.now() - ms;
+    if (diff < 60_000) return "just now";
+    const m = Math.floor(diff / 60_000); if (m < 60) return m + "m ago";
+    const h = Math.floor(m / 60); if (h < 24) return h + "h ago";
+    const d = Math.floor(h / 24); if (d < 30) return d + "d ago";
+    return new Date(ms).toLocaleDateString();
+  };
+
+  const renderComment = (c) => {
+    const card = document.createElement("div");
+    card.className = "comment-card";
+    const head = document.createElement("div");
+    head.className = "comment-card-head";
+    const av = document.createElement("div");
+    av.className = "comment-avatar";
+    av.textContent = (c.name || "?").trim().charAt(0).toUpperCase() || "?";
+    av.style.background = `hsl(${(c.name || "anon").split("").reduce((a, ch) => a + ch.charCodeAt(0), 0) % 360}, 60%, 45%)`;
+    const author = document.createElement("span");
+    author.className = "comment-author";
+    author.textContent = c.name || "Anonymous";
+    const time = document.createElement("time");
+    time.className = "comment-time";
+    time.textContent = relTime(c.createdAt);
+    head.append(av, author, time);
+    const body = document.createElement("p");
+    body.className = "comment-body";
+    body.textContent = c.body;
+    card.append(head, body);
+    return card;
+  };
+
+  const renderComments = () => {
+    const list = loadComments();
+    commentList.innerHTML = "";
+    if (!list.length) {
+      const empty = document.createElement("p");
+      empty.className = "comment-empty";
+      empty.textContent = "No comments yet — be the first.";
+      commentList.appendChild(empty);
+      return;
+    }
+    list.slice().reverse().forEach((c) => commentList.appendChild(renderComment(c)));
+  };
+
+  commentBody.addEventListener("input", () => {
+    commentCounter.textContent = commentBody.value.length + " / 1000";
+  });
+
+  const setCommentStatus = (msg, kind) => {
+    if (!msg) { commentStatus.hidden = true; return; }
+    commentStatus.textContent = msg;
+    commentStatus.className = "comment-status " + (kind || "");
+    commentStatus.hidden = false;
+  };
+
+  commentForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = commentName.value.trim().slice(0, 40);
+    const body = commentBody.value.trim();
+
+    if (body.length < 2) {
+      setCommentStatus("Please write a comment first.", "error");
+      commentBody.focus(); return;
+    }
+    if (BAD_RE.test(body) || BAD_RE.test(name)) {
+      setCommentStatus("Your comment contains language that isn't allowed. Please keep it civil.", "error");
+      return;
+    }
+
+    const list = loadComments();
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: name || "Anonymous",
+      body,
+      createdAt: Date.now(),
+    };
+    list.push(entry);
+    // Keep only the last 100 comments
+    if (list.length > 100) list.splice(0, list.length - 100);
+    saveComments(list);
+
+    commentForm.reset();
+    commentCounter.textContent = "0 / 1000";
+    setCommentStatus("Posted — thanks for the feedback!", "ok");
+    setTimeout(() => setCommentStatus(null), 3500);
+    renderComments();
+  });
+
+  renderComments();
+
+  /* =========================================================
+     SEARCH
+     ========================================================= */
+  const pageSearch = $("#page-search");
+  pageSearch?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const q = pageSearch.value.trim().toLowerCase();
+    if (!q) return;
+    const targets = $$("h2, h3, .card h3, .format-card h3");
+    const hit = targets.find((el) => el.textContent.toLowerCase().includes(q));
+    if (hit) {
+      hit.scrollIntoView({ behavior: "smooth", block: "center" });
+      hit.classList.add("search-flash");
+      setTimeout(() => hit.classList.remove("search-flash"), 1600);
+    }
+  });
 
   /* =========================================================
      INIT
@@ -940,31 +1184,11 @@
     loadPrefs();
     updatePlayPauseUI();
     updateVolumeUI();
-
+    applyAspect();
     const year = $("#year");
     if (year) year.textContent = new Date().getFullYear();
-
-    /* Page search (simple, in-page). */
-    const pageSearch = $("#page-search");
-    pageSearch?.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      const q = pageSearch.value.trim().toLowerCase();
-      if (!q) return;
-      const targets = $$("h2, h3, .card h3, .format-card h3");
-      const hit = targets.find((el) =>
-        el.textContent.toLowerCase().includes(q)
-      );
-      if (hit) {
-        hit.scrollIntoView({ behavior: "smooth", block: "center" });
-        hit.classList.add("search-flash");
-        setTimeout(() => hit.classList.remove("search-flash"), 1600);
-      }
-    });
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();
