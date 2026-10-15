@@ -1,56 +1,63 @@
-# FISOMOVIE PLAYER
+Act as a senior frontend developer and professional UI/UX designer. Update my existing open-source project **FISOMOVIE PLAYER** with a polished, user-friendly donation section.
 
-Liquid Glass. Minimal. Fast. Responsive.
+**GitHub:** https://github.com/fiso420/fisomovie-player
 
-A static video player built with HTML, CSS and vanilla JavaScript. No build step, no backend, no analytics, no ads.
+### 1. Donation section design
+Create a premium “Buy Me a Coffee ☕” section using the existing website design:
+- iOS-inspired Liquid Glass UI.
+- Dark and light theme compatibility.
+- Responsive layout for mobile, tablet, and desktop.
+- Attractive coffee icon, subtle animations, and clean typography.
+- A friendly message thanking users for supporting open-source development.
+- Make donations completely optional. Never restrict player features.
 
-## Files
+### 2. WebMoney wallet information
+Use the following public wallet information from my wallet screenshot:
 
-- `index.html` – entry point
-- `style.css` – themes (CSS custom properties), glass surfaces, responsive layout
-- `script.js` – player logic (native HTML5 video; HLS.js is loaded only when needed)
+- Payment service: WebMoney
+- Wallet type shown: WMT
+- Wallet number: `T668356659070`
+- WMID: `625444252474`
 
-## Run locally
+Use the WMT wallet number as the proposed receiving identifier only after verifying that it supports incoming payments. Do not use the WMID as a substitute for the wallet number.
 
-Serve the folder with any static server, for example `python3 -m http.server 8080`, then open http://localhost:8080.
+### 3. Donation interaction
+- Add a “Donate with WebMoney” button only when a verified payment destination or official payment URL is configured.
+- If WebMoney provides a supported payment URL, use the real URL rather than inventing one.
+- Add a Copy Wallet Number button if the receiving method supports manual transfers.
+- Display a confirmation message when the wallet number is copied.
+- If a QR code or payment link is available, display it only after its authenticity and destination are verified.
+- Never claim a donation was received unless payment confirmation is implemented.
+- Never ask visitors for passwords, verification codes, private keys, or sensitive account information.
 
-## Deploy
+### 4. Configuration
+Create a clearly documented configuration object:
 
-**Vercel**
-1. Push the folder to a Git repository, then choose *Add New → Project* and import it.
-2. Framework Preset: *Other*. Leave build command and output directory empty. The project root is served as-is.
-3. Deploy. (CLI alternative: run `vercel --prod` inside the folder.)
+const DONATION_CONFIG = {
+  provider: "WebMoney",
+  walletType: "WMT",
+  walletNumber: "T668356659070",
+  wmid: "625444252474",
+  paymentUrl: "",
+  enabled: false
+};
 
-**Netlify**
-1. Drag the folder onto https://app.netlify.com/drop, or import the Git repository.
-2. Build command: empty. Publish directory: `.` (the folder containing `index.html`).
-3. Deploy.
+Keep the donation section disabled until I verify the wallet's incoming-payment instructions and configure a valid payment method. Do not invent a payment URL.
 
-No `vercel.json` or `netlify.toml` is required. Both platforms serve over HTTPS, which is needed for `https://` media, Picture-in-Picture and fullscreen on many browsers.
+### 5. README update
+Update `README.md` with:
+- Project overview and actual features.
+- A Support the Project section.
+- WebMoney donation instructions.
+- A note that donations are optional.
+- Installation and deployment instructions.
+- Troubleshooting and contribution guidelines.
 
-## Playing media
+Do not invent a license, features, payment confirmation, donation statistics, or supported payment capabilities.
 
-- Use **direct** links to a video file (MP4 H.264/AAC and WebM play most widely) or an `.m3u8` HLS playlist. Web page URLs (YouTube, Vimeo and similar) cannot be played.
-- Because this site is served over HTTPS, `http://` media is blocked by browsers (mixed content). Use `https://`.
-- Plain file links usually play without CORS headers. **HLS needs CORS**: the playlist and segments must be served with `Access-Control-Allow-Origin` allowing your site. Without it, HLS.js cannot load them.
-- Safari (iOS/macOS) plays HLS natively. Other browsers load HLS.js (v1.5.17) from jsDelivr on first use only. To avoid the third-party request, download `hls.min.js`, place it in the project (for example `vendor/hls.min.js`) and change `HLS_URL` at the top of `script.js` to `'vendor/hls.min.js'`.
-- Expired signed links, blocked hotlinking, unsupported codecs (for example HEVC or MKV in some browsers) and server outages show an error message instead of playing.
-- Smooth playback depends on your connection, the server and the encoding. The player loads only metadata up front and uses native streaming; it never downloads the whole file first.
+### 6. Code quality
+Inspect the existing repository before modifying anything. Preserve working player functionality and existing project architecture. Use the appropriate files for the current stack. Implement secure clipboard handling, accessible controls, mobile responsiveness, and useful error messages.
 
-## Local files and subtitles
+Provide the complete updated code, list the changed files, and explain how to deploy the result on Vercel or Netlify.
 
-Choose or drag a video file onto the page. It plays through a temporary in-browser URL and is never uploaded. Add `.vtt` (WebVTT) subtitles after a video is loaded; press **C** to cycle tracks or turn them off. Subtitles are cleared when you switch videos.
-
-## Shortcuts
-
-Space / K play-pause · J / L skip 10 s · ← / → skip 5 s · ↑ / ↓ volume · M mute · F fullscreen · C subtitles · P Picture in Picture
-
-## Browser notes
-
-- iPhone Safari uses the system fullscreen player, and the volume slider is hidden because iOS keeps volume under hardware control.
-- Autoplay is never attempted; playback always starts from a user action.
-- Picture-in-Picture appears only where the browser supports it.
-
-## Testing status
-
-The code was syntax-checked with Node. It has **not** been run in real browsers, on devices or on Vercel/Netlify from this environment. Before relying on it, run through: theme toggle and reload persistence, valid and invalid URLs, local file and source switching, play/seek/volume/speed, subtitles, fullscreen and PiP, keyboard use, reduced-motion, and layouts at phone, tablet and desktop sizes in portrait and landscape.
+Do not claim that the donation system is operational until the receiving method has been verified and tested.
