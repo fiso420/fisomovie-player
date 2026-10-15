@@ -6,33 +6,28 @@
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>FISOMOVIE PLAYER — Next-Gen Web Video Player</title>
   
-  <meta name="description" content="FISOMOVIE PLAYER is a high-performance, Liquid Glass HTML5 video player supporting MP4, WebM, HLS m3u8 streams, SRT/VTT subtitles, multi-track audio, and customizable themes.">
-  <meta name="theme-color" content="#0d0f17" id="meta-theme-color">
+  <meta name="description" content="FISOMOVIE PLAYER is a high-performance, Liquid Glass HTML5 video player supporting MP4, WebM, HLS m3u8 streams, and audio-track switching.">
+  <meta name="theme-color" content="#090b10" id="meta-theme-color">
 
-  <!-- Content Security Policy: Safe, secure, and compatible with CDNs and blob media -->
+  <!-- Relaxed CSP to permit cross-origin BDIX/FTP streaming and CDN libraries -->
   <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+    default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http: blob: data:;
+    media-src * blob: data: http: https:;
+    connect-src * blob: data: http: https:;
+    img-src * data: blob:;
+    font-src 'self' https://fonts.gstatic.com data:;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    font-src 'self' https://fonts.gstatic.com;
-    img-src 'self' data: blob: https:;
-    media-src 'self' blob: data: https: http:;
-    connect-src 'self' blob: data: https: http:;
-    worker-src 'self' blob:;
   ">
 
-  <!-- Inline SVG Favicon (No external .ico or image dependencies) -->
+  <!-- Embedded SVG Favicon (No .ico file required) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0%25'%20y1='0%25'%20x2='100%25'%20y2='100%25'%3E%3Cstop%20offset='0%25'%20stop-color='%236366f1'/%3E%3Cstop%20offset='100%25'%20stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='64'%20height='64'%20rx='16'%20fill='%230a0c14'/%3E%3Crect%20x='2'%20y='2'%20width='60'%20height='60'%20rx='14'%20fill='none'%20stroke='url(%23g)'%20stroke-width='2'%20stroke-opacity='0.4'/%3E%3Cpath%20d='M24%2018%20L48%2032%20L24%2046%20Z'%20fill='url(%23g)'/%3E%3C/svg%3E">
 
-  <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Application Styles -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- HLS.js for HTTP Live Streaming support (.m3u8) -->
+  <!-- Pinned Hls.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 </head>
 <body>
@@ -48,12 +43,12 @@
         <span class="brand-title">FISO<strong>MOVIE</strong></span>
       </div>
 
-      <nav class="header-actions" aria-label="User preferences">
+      <nav class="header-actions" aria-label="Preferences and repository">
         <button id="theme-panel-btn" class="icon-btn" title="Customize theme and accent color" aria-label="Open appearance settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
 
-        <a href="https://github.com/fiso420/fisomovie-player" target="_blank" rel="noopener noreferrer" class="github-star-link" title="Opens repository in a new tab; star it on GitHub">
+        <a href="https://github.com/fiso420/fisomovie-player" target="_blank" rel="noopener noreferrer" class="github-star-link" title="Open repository in a new tab">
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
           <span>Star on GitHub</span>
         </a>
@@ -64,82 +59,86 @@
     <section class="glass-panel source-controller" aria-label="Media source selector">
       <div class="source-inputs-row">
         <div class="url-input-wrap">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-          <input type="url" id="stream-url-input" placeholder="Paste direct video URL (MP4, WebM, HLS .m3u8)..." autocomplete="off" spellcheck="false">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <input type="url" id="stream-url-input" placeholder="Enter direct stream URL (MP4, HLS .m3u8, WebM)..." autocomplete="off" spellcheck="false">
           <button id="load-url-btn" class="glass-btn btn-primary" type="button">Load Stream</button>
         </div>
 
         <div class="file-input-wrap">
-          <label for="local-file-input" class="glass-btn file-picker-label" title="Select video from disk">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <label for="local-file-input" class="glass-btn file-picker-label" title="Play a video from your computer or phone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             <span>Open Local File</span>
           </label>
-          <input type="file" id="local-file-input" accept="video/*,.mkv,.mp4,.m3u8,.webm,.mov,.avi" class="visually-hidden">
+          <input type="file" id="local-file-input" accept="video/*,.mkv,.mp4,.m3u8,.webm,.mov" class="visually-hidden">
           
           <button id="clear-source-btn" class="glass-btn btn-secondary" title="Clear current source" type="button">Clear</button>
         </div>
       </div>
       
-      <!-- Drag & Drop Overlay Zone Notice -->
-      <div id="drop-indicator" class="drop-hint">
-        <span>Drag & drop media anywhere to play immediately</span>
+      <div id="source-alert-banner" class="source-hint-banner visually-hidden">
+        <span id="source-alert-text"></span>
       </div>
     </section>
 
-    <!-- MAIN VIDEO PLAYER CONTAINER -->
+    <!-- MAIN VIDEO PLAYER AREA -->
     <main class="player-wrapper" id="player-wrapper" tabindex="0" aria-label="Video Player Area">
       <div class="video-aspect-box" id="video-aspect-box">
         
-        <!-- Native Video Element -->
-        <video id="main-video" playsinline preload="metadata" crossorigin="anonymous">
-          <p>Your browser does not support the HTML5 video element.</p>
+        <!-- Video element without hardcoded crossorigin to allow direct BDIX / Apache / MP4 streaming -->
+        <video id="main-video" playsinline preload="metadata">
+          <p>Your browser does not support HTML5 video.</p>
         </video>
 
-        <!-- Dynamic Subtitle Display Rendering Box -->
+        <!-- Subtitle Overlay -->
         <div id="subtitle-renderer" class="subtitle-overlay" aria-live="polite"></div>
 
-        <!-- Big Center Play / Pause Feedback Pulse -->
+        <!-- Center Click Pulse -->
         <div id="center-feedback" class="center-feedback-indicator" aria-hidden="true">
           <svg id="center-icon" viewBox="0 0 24 24" fill="currentColor"></svg>
         </div>
 
-        <!-- Loading / Buffering Spinner -->
+        <!-- Buffering Spinner -->
         <div id="buffering-spinner" class="player-loading-spinner" aria-hidden="true">
           <div class="spinner-ring"></div>
-          <span class="loading-label">Buffering...</span>
+          <span class="loading-label" id="spinner-label">Buffering...</span>
         </div>
 
-        <!-- Interruption & Recovery Overlay (Appears on failure or media completion) -->
+        <!-- REVISED INTERRUPTED & RECOVERY MODAL -->
         <div id="recovery-overlay" class="player-overlay-modal glass-blur visually-hidden" role="alertdialog" aria-modal="true">
           <div class="modal-card">
             <div class="modal-icon-wrap" id="overlay-status-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
-            <h3 id="overlay-title" class="modal-title">Playback Interrupted</h3>
-            <p id="overlay-message" class="modal-desc">The media stream has concluded or encountered a network error.</p>
+            
+            <h3 id="overlay-title" class="modal-title">Playback Diagnostic</h3>
+            <p id="overlay-message" class="modal-desc"></p>
+            
+            <div class="diagnostic-box" id="diagnostic-details-box">
+              <span class="diag-header">Technical Root Cause:</span>
+              <p id="diagnostic-tech-text" class="diag-text"></p>
+            </div>
+
             <div class="modal-actions">
-              <button id="resume-retry-btn" class="glass-btn btn-primary">Continue Playing</button>
+              <button id="resume-retry-btn" class="glass-btn btn-primary">Retry Stream</button>
+              <button id="overlay-local-btn" class="glass-btn btn-secondary">Open Local File</button>
               <button id="restart-btn" class="glass-btn btn-secondary">Restart</button>
             </div>
             <p id="overlay-note" class="modal-note"></p>
           </div>
         </div>
 
-        <!-- Popover Settings Menus (Speed, Audio, Quality, Subtitles) -->
+        <!-- Settings Popover -->
         <div id="settings-menu" class="settings-popover glass-blur visually-hidden" role="menu">
           <div class="menu-header">
             <span id="menu-title">Settings</span>
             <button id="close-menu-btn" class="icon-btn-tiny" aria-label="Close menu">&times;</button>
           </div>
-          <div id="menu-content" class="menu-list">
-            <!-- Dynamically populated options -->
-          </div>
+          <div id="menu-content" class="menu-list"></div>
         </div>
 
-        <!-- CUSTOM LIQUID GLASS VIDEO CONTROLS BAR -->
+        <!-- CONTROLS BAR -->
         <div class="player-controls-container" id="player-controls" role="toolbar" aria-label="Playback controls">
           
-          <!-- Timeline / Scrubber Bar -->
           <div class="scrubber-wrapper">
             <div class="timeline-bar" id="timeline-container">
               <div class="timeline-buffered" id="timeline-buffered"></div>
@@ -149,10 +148,7 @@
             <span class="time-tooltip" id="time-tooltip">00:00</span>
           </div>
 
-          <!-- Bottom Controls Row -->
           <div class="controls-row">
-            
-            <!-- Left Controls: Play, Skip, Volume, Time -->
             <div class="controls-group left">
               <button id="play-pause-btn" class="ctrl-btn" title="Play (Space / K)" aria-label="Play">
                 <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -182,47 +178,39 @@
               </div>
             </div>
 
-            <!-- Right Controls: Audio track, Quality, Subtitles, Speed, PiP, Fullscreen -->
             <div class="controls-group right">
-              <!-- Audio Track Button -->
-              <button id="audio-track-btn" class="ctrl-btn text-icon-btn" title="Audio Track Selector" aria-haspopup="true">
+              <button id="audio-track-btn" class="ctrl-btn text-icon-btn" title="Audio Track" aria-haspopup="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                 <span class="btn-subtext" id="audio-track-label">Audio</span>
               </button>
 
-              <!-- Quality Selector Button -->
               <button id="quality-btn" class="ctrl-btn text-icon-btn" title="Video Quality" aria-haspopup="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
                 <span class="btn-subtext" id="quality-label">Auto</span>
               </button>
 
-              <!-- Subtitle Button -->
               <button id="subtitles-btn" class="ctrl-btn" title="Subtitles (VTT/SRT)" aria-haspopup="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 10h4M14 10h4M6 14h8"/></svg>
               </button>
 
-              <!-- Speed Selector Button -->
               <button id="speed-btn" class="ctrl-btn text-icon-btn" title="Playback Speed" aria-haspopup="true">
                 <span id="speed-label">1x</span>
               </button>
 
-              <!-- Picture In Picture -->
               <button id="pip-btn" class="ctrl-btn" title="Picture in Picture" aria-label="Picture in picture">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="10" width="8" height="6" rx="1"/></svg>
               </button>
 
-              <!-- Fullscreen Button -->
               <button id="fullscreen-btn" class="ctrl-btn" title="Fullscreen (F)" aria-label="Toggle Fullscreen">
                 <svg id="fullscreen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
               </button>
             </div>
-
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Source Info & Advanced Capabilities Note -->
+    <!-- Stream Diagnostic Bar -->
     <section class="glass-panel info-banner">
       <div class="info-details">
         <h2 class="section-title">Stream Status & Codec Intelligence</h2>
@@ -231,18 +219,18 @@
       <div class="codec-tags" id="codec-caps-box">
         <span class="tag">Native HTML5</span>
         <span class="tag">HLS.js Adaptive</span>
-        <span class="tag">WebCodecs &amp; MSE</span>
+        <span class="tag" id="tag-mkv-cap">MKV: Checking</span>
       </div>
     </section>
 
-    <!-- Interactive Subtitle Loader & Font Customizer -->
+    <!-- Subtitle Settings Drawer -->
     <details class="glass-panel expandable-drawer">
       <summary class="drawer-header">Subtitle File (.vtt / .srt) & Styling Settings</summary>
       <div class="drawer-body">
         <div class="drawer-col">
           <label for="sub-file-input" class="form-label">Upload external subtitle file:</label>
           <input type="file" id="sub-file-input" accept=".vtt,.srt" class="form-input-file">
-          <p class="form-helper">SRT files are parsed on-the-fly directly in memory using Web Workers/Blobs.</p>
+          <p class="form-helper">SRT files are parsed instantly in-memory without uploading.</p>
         </div>
         <div class="drawer-col">
           <label for="sub-size-select" class="form-label">Subtitle Text Size:</label>
@@ -256,7 +244,7 @@
       </div>
     </details>
 
-    <!-- THEME CUSTOMIZATION MODAL / SLIDEOUT -->
+    <!-- Appearance Drawer -->
     <aside id="theme-modal" class="theme-drawer glass-blur visually-hidden" aria-labelledby="theme-modal-title">
       <div class="drawer-card">
         <div class="drawer-top">
@@ -299,20 +287,18 @@
       </div>
     </aside>
 
-    <!-- USER COMMENTS AND SAFE REACTION SECTION -->
+    <!-- Comments Section -->
     <section class="glass-panel comments-section" aria-labelledby="comments-heading">
       <div class="comments-header">
         <h2 id="comments-heading" class="section-title">Community Discussion</h2>
         <span class="badge" id="comment-count-badge">0 Comments</span>
       </div>
 
-      <!-- Warning Box For Moderated Language -->
       <div id="comment-warning-box" class="warning-alert visually-hidden" role="alert">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span id="comment-warning-text">Your comment contains inappropriate or restricted terms. Please revise your message.</span>
+        <span id="comment-warning-text">Your comment contains inappropriate or restricted terms.</span>
       </div>
 
-      <!-- New Comment Form -->
       <form id="comment-form" class="comment-compose-form">
         <div class="form-row">
           <input type="text" id="commenter-name" placeholder="Your name or alias" maxlength="32" required class="form-input">
@@ -326,24 +312,19 @@
         </div>
       </form>
 
-      <!-- Comments Stream List -->
-      <div class="comments-list" id="comments-list" aria-live="polite">
-        <!-- Rendered safely through script.js DOM text nodes -->
-      </div>
+      <div class="comments-list" id="comments-list" aria-live="polite"></div>
       
       <p class="comments-disclaimer">
         * Static demo comments are stored locally. For team and production use, integrate a dedicated backend (such as Supabase or Firebase) with row-level security and server-side verification.
       </p>
     </section>
 
-    <!-- Footer -->
     <footer class="app-footer">
       <p>FISOMOVIE PLAYER &bull; Engineered with Apple Liquid Glass UI &bull; No trackers &bull; Open Source</p>
     </footer>
 
   </div>
 
-  <!-- Main Application Controller -->
   <script src="script.js"></script>
 </body>
 </html>
