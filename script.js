@@ -4,90 +4,93 @@
 (() => {
   "use strict";
 
-  const $ = (sel, root = document) => root.querySelector(sel);
+  /* ---------- Tiny helpers ---------- */
+  const $  = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   /* ---------- Constants ---------- */
   const HLS_CDN = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
   const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const ASPECTS = [
-    { id: "fit", label: "Fit", css: "contain" },
-    { id: "fill", label: "Fill", css: "cover" },
-    { id: "zoom", label: "Zoom 16:9", css: "cover", zoom: true },
+    { id: "fit",  label: "Fit",       css: "contain", scale: 1 },
+    { id: "fill", label: "Fill",      css: "cover",   scale: 1 },
+    { id: "zoom", label: "Zoom 16:9", css: "cover",   scale: 1.08 },
   ];
-  const SUB_STYLE_KEY = "fiso-sub-style";
   const PREFS_KEY = "fiso-prefs";
+  const THEME_KEY = "fiso-theme";
 
   /* ---------- DOM ---------- */
-  const video = $("#video");
-  const stage = $("#video-stage");
-  const overlay = $("#stage-overlay");
-  const overlayMsg = $("#stage-message");
-  const spinner = $("#stage-spinner");
-  const bigPlay = $("#big-play");
+  const video       = $("#video");
+  const stage       = $("#video-stage");
+  const overlay     = $("#stage-overlay");
+  const overlayMsg  = $("#stage-message");
+  const spinner     = $("#stage-spinner");
+  const bigPlay     = $("#big-play");
 
   const playPauseBtn = $("#play-pause");
-  const playIcon = playPauseBtn.querySelector(".i-play");
-  const pauseIcon = playPauseBtn.querySelector(".i-pause");
-  const skipBack = $("#skip-back");
-  const skipFwd = $("#skip-fwd");
-  const muteBtn = $("#mute-btn");
-  const volIcon = muteBtn.querySelector(".i-vol");
-  const muteIcon = muteBtn.querySelector(".i-mute");
-  const volSlider = $("#volume");
-  const seek = $("#seek");
-  const playedBar = $("#progress-played");
-  const bufferBar = $("#progress-buffer");
-  const curTimeEl = $("#current-time");
-  const durTimeEl = $("#duration");
-  const fsBtn = $("#fs-btn");
-  const fsIcon = fsBtn.querySelector(".i-fs");
-  const fsExitIcon = fsBtn.querySelector(".i-fs-exit");
-  const pipBtn = $("#pip-btn");
+  const playIcon     = playPauseBtn.querySelector(".i-play");
+  const pauseIcon    = playPauseBtn.querySelector(".i-pause");
+  const skipBack     = $("#skip-back");
+  const skipFwd      = $("#skip-fwd");
+  const muteBtn      = $("#mute-btn");
+  const volIcon      = muteBtn.querySelector(".i-vol");
+  const muteIcon     = muteBtn.querySelector(".i-mute");
+  const volSlider    = $("#volume");
+  const seek         = $("#seek");
+  const playedBar    = $("#progress-played");
+  const bufferBar    = $("#progress-buffer");
+  const curTimeEl    = $("#current-time");
+  const durTimeEl    = $("#duration");
+  const fsBtn        = $("#fs-btn");
+  const fsIcon       = fsBtn.querySelector(".i-fs");
+  const fsExitIcon   = fsBtn.querySelector(".i-fs-exit");
+  const pipBtn       = $("#pip-btn");
 
-  const urlInput = $("#url-input");
-  const loadBtn = $("#load-btn");
-  const pasteBtn = $("#paste-btn");
-  const urlError = $("#url-error");
+  const urlInput   = $("#url-input");
+  const loadBtn    = $("#load-btn");
+  const pasteBtn   = $("#paste-btn");
+  const urlError   = $("#url-error");
 
-  const fileInput = $("#file-input");
-  const fileDrop = $("#file-drop");
-  const folderBtn = $("#folder-btn");
+  const fileInput   = $("#file-input");
+  const fileDrop    = $("#file-drop");
+  const folderBtn   = $("#folder-btn");
   const folderInput = $("#folder-input");
 
-  const playlistEl = $("#playlist");
-  const playlistItems = $("#playlist-items");
-  const playlistTitle = $("#playlist-title");
-  const playlistCount = $("#playlist-count");
+  const playlistEl     = $("#playlist");
+  const playlistItems  = $("#playlist-items");
+  const playlistTitle  = $("#playlist-title");
+  const playlistCount  = $("#playlist-count");
 
-  const settingsBtn = $("#settings-btn");
+  const settingsBtn   = $("#settings-btn");
   const settingsPanel = $("#settings-panel");
   const settingsTitle = $("#settings-title");
-  const settingsBack = $("#settings-back");
+  const settingsBack  = $("#settings-back");
   const settingsClose = $("#settings-close");
-  const valSpeed = $("#val-speed");
-  const valQuality = $("#val-quality");
-  const valAudio = $("#val-audio");
-  const valSubs = $("#val-subs");
-  const valAspect = $("#val-aspect");
+  const valSpeed      = $("#val-speed");
+  const valQuality    = $("#val-quality");
+  const valAudio      = $("#val-audio");
+  const valSubs       = $("#val-subs");
+  const valAspect     = $("#val-aspect");
 
-  const speedView = $('[data-view="speed"]');
-  const qualityList = $("#quality-list");
-  const audioList = $("#audio-list");
-  const subsList = $("#subs-list");
-  const aspectList = $("#aspect-list");
+  const speedView    = $('[data-view="speed"]');
+  const qualityList  = $("#quality-list");
+  const audioList    = $("#audio-list");
+  const subsList     = $("#subs-list");
+  const aspectList   = $("#aspect-list");
   const subtitleFile = $("#subtitle-file");
 
   const toggleAmbient = $("#toggle-ambient");
-  const toggleLoop = $("#toggle-loop");
-  const resetBtn = $("#reset-settings");
+  const toggleLoop    = $("#toggle-loop");
+  const resetBtn      = $("#reset-settings");
+
+  const dropOverlay = $("#drop-overlay");
 
   /* ---------- State ---------- */
   const state = {
     hls: null,
-    sources: [], // { name, url, file? }
+    sources: [],          // { name, url, file? }
     currentIndex: -1,
-    objectUrls: [],
+    objectUrls: [],       // blob: URLs to revoke
     prefs: {
       volume: 1,
       muted: false,
@@ -98,31 +101,37 @@
     },
     settingsStack: ["root"],
     qualityLevels: [],
-    subtitleTracks: [],
     externalSubUrl: null,
+    dragCount: 0,
+    hideTimer: null,
   };
 
   /* =========================================================
      THEME
      ========================================================= */
   const themeToggle = $("#theme-toggle");
-  const THEME_KEY = "fiso-theme";
-  const storedTheme = localStorage.getItem(THEME_KEY);
-  if (storedTheme) document.documentElement.dataset.theme = storedTheme;
+  const storedTheme = (() => {
+    try { return localStorage.getItem(THEME_KEY); } catch { return null; }
+  })();
+  if (storedTheme === "dark" || storedTheme === "light") {
+    document.documentElement.dataset.theme = storedTheme;
+  }
   themeToggle.addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    const next =
+      document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
-    localStorage.setItem(THEME_KEY, next);
+    try { localStorage.setItem(THEME_KEY, next); } catch {}
   });
 
   /* =========================================================
-     TABS (URL / Files / Folder)
+     TABS
      ========================================================= */
   $$(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       $$(".tab").forEach((t) => {
-        t.classList.toggle("active", t === tab);
-        t.setAttribute("aria-selected", t === tab ? "true" : "false");
+        const on = t === tab;
+        t.classList.toggle("active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
       });
       $$(".pane").forEach((p) => {
         p.classList.toggle("active", p.dataset.pane === tab.dataset.tab);
@@ -143,26 +152,22 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
   };
 
-  const showError = (msg) => {
+  const showOverlay = (msg, isLoading) => {
+    if (!overlay || !overlayMsg || !spinner) return;
     overlay.hidden = false;
-    spinner.style.display = "none";
+    spinner.style.display = isLoading ? "block" : "none";
     overlayMsg.textContent = msg;
   };
-  const showLoading = (msg = "Loading…") => {
-    overlay.hidden = false;
-    spinner.style.display = "block";
-    overlayMsg.textContent = msg;
-  };
-  const hideOverlay = () => { overlay.hidden = true; };
+  const showLoading = (msg) => showOverlay(msg || "Loading…", true);
+  const showError   = (msg) => showOverlay(msg, false);
+  const hideOverlay = () => { if (overlay) overlay.hidden = true; };
 
   const isDirectMediaUrl = (s) => {
     try {
       const u = new URL(s);
-      if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-      return true;
+      return u.protocol === "http:" || u.protocol === "https:";
     } catch { return false; }
   };
-
   const isHlsUrl = (s) => /\.m3u8(\?.*)?$/i.test(s);
 
   const loadHlsLib = () => {
@@ -171,7 +176,7 @@
       const s = document.createElement("script");
       s.src = HLS_CDN;
       s.onload = () => resolve(window.Hls);
-      s.onerror = () => reject(new Error("Failed to load HLS library"));
+      s.onerror = () => reject(new Error("Failed to load HLS library."));
       document.head.appendChild(s);
     });
   };
@@ -187,24 +192,20 @@
   };
 
   const clearObjectUrls = () => {
-    state.objectUrls.forEach((u) => URL.revokeObjectURL(u));
+    state.objectUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
     state.objectUrls = [];
   };
 
   const applyAspect = () => {
     const a = ASPECTS.find((x) => x.id === state.prefs.aspect) || ASPECTS[0];
     video.style.objectFit = a.css;
-    if (a.zoom) {
-      video.style.transform = "scale(1.08)";
-    } else {
-      video.style.transform = "none";
-    }
+    video.style.transform = a.scale === 1 ? "none" : `scale(${a.scale})`;
   };
 
-  const loadSource = async (src, { isUrl = false, name = "" } = {}) => {
+  const loadSource = async (src, { isUrl = false } = {}) => {
     destroyHls();
     video.removeAttribute("src");
-    video.load();
+    try { video.load(); } catch {}
     showLoading(isUrl ? "Fetching stream…" : "Opening file…");
 
     try {
@@ -220,20 +221,18 @@
               id: i,
               label: l.height ? `${l.height}p` : `Level ${i + 1}`,
             }));
-            buildQualityList();
+            if (settingsPanel && !settingsPanel.hidden) buildQualityList();
           });
           hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              const msg =
-                data.type === "networkError"
-                  ? "Network error. The stream may be offline, CORS-blocked, or expired."
-                  : "The HLS stream could not be played.";
-              showError(msg);
-            }
+            if (!data.fatal) return;
+            const msg =
+              data.type === "networkError"
+                ? "Network error. The stream may be offline, CORS-blocked, or expired."
+                : "The HLS stream could not be played.";
+            showError(msg);
           });
           return;
         }
-        // Safari can play HLS natively
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = src;
           return;
@@ -261,11 +260,11 @@
       return;
     }
     if (!isDirectMediaUrl(val)) {
-      urlError.textContent = "That doesn't look like a valid media URL. Use a direct link to a video file or an HLS .m3u8 stream.";
+      urlError.textContent =
+        "That doesn't look like a valid media URL. Use a direct link to a video file or an HLS .m3u8 stream.";
       urlError.hidden = false;
       return;
     }
-    // Note: we do NOT claim every site URL is playable.
     loadBtn.disabled = true;
     try {
       clearPlaylist();
@@ -279,8 +278,8 @@
     if (e.key === "Enter") { e.preventDefault(); loadBtn.click(); }
   });
 
-  // Paste button (only if allowed)
-  if (navigator.clipboard && navigator.clipboard.readText) {
+  /* Paste button — only if the Clipboard API is available. */
+  if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
     pasteBtn.hidden = false;
     pasteBtn.addEventListener("click", async () => {
       try {
@@ -296,22 +295,26 @@
   }
 
   /* =========================================================
-     FILES
+     FILES & PLAYLIST
      ========================================================= */
   const isPlayableFile = (f) => {
     const name = (f.name || "").toLowerCase();
-    if (f.type && (f.type.startsWith("video/") || f.type.startsWith("audio/"))) return true;
+    if (f.type && (f.type.startsWith("video/") || f.type.startsWith("audio/"))) {
+      return true;
+    }
     return /\.(mp4|m4v|webm|mkv|mov|avi|flv|ts|m2ts|mp3|m4a|aac|flac|wav|ogg|oga|opus)$/.test(name);
   };
 
   const naturalSort = (a, b) =>
     a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 
-  const setPlaylist = async (files) => {
+  const setPlaylist = (files) => {
     const vids = files.filter(isPlayableFile).sort(naturalSort);
     if (!vids.length) return;
+
     clearObjectUrls();
     clearPlaylist();
+
     state.sources = vids.map((f) => {
       const url = URL.createObjectURL(f);
       state.objectUrls.push(url);
@@ -324,24 +327,33 @@
   const clearPlaylist = () => {
     state.sources = [];
     state.currentIndex = -1;
-    playlistEl.hidden = true;
-    playlistItems.innerHTML = "";
-    playlistCount.textContent = "0";
+    if (playlistEl) playlistEl.hidden = true;
+    if (playlistItems) playlistItems.innerHTML = "";
+    if (playlistCount) playlistCount.textContent = "0";
   };
 
   const renderPlaylist = () => {
+    if (!playlistEl || !playlistItems) return;
     playlistEl.hidden = state.sources.length <= 1;
     playlistItems.innerHTML = "";
     playlistCount.textContent = String(state.sources.length);
-    if (state.sources.length > 1) {
+    if (state.sources.length > 1 && playlistTitle) {
       playlistTitle.textContent = "Playlist";
     }
     state.sources.forEach((src, i) => {
       const li = document.createElement("li");
       li.dataset.index = String(i);
       if (i === state.currentIndex) li.classList.add("active");
-      li.innerHTML = `<span class="idx">${i + 1}</span><span class="name"></span>`;
-      li.querySelector(".name").textContent = src.name;
+
+      const idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = String(i + 1);
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = src.name;
+
+      li.append(idx, name);
       li.addEventListener("click", () => playIndex(i));
       playlistItems.appendChild(li);
     });
@@ -354,24 +366,23 @@
       li.classList.toggle("active", Number(li.dataset.index) === i)
     );
     const src = state.sources[i];
-    await loadSource(src.url, { name: src.name });
-    video.play().catch(() => { /* user can hit play */ });
+    await loadSource(src.url, { isUrl: false });
+    video.play().catch(() => {});
   };
 
-  fileInput.addEventListener("change", (e) => {
+  fileInput?.addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) setPlaylist(files);
     fileInput.value = "";
   });
 
-  folderInput.addEventListener("change", (e) => {
+  folderInput?.addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length) setPlaylist(files);
     folderInput.value = "";
   });
 
-  // Folder button: use File System Access API when available, else fallback
-  folderBtn.addEventListener("click", async () => {
+  folderBtn?.addEventListener("click", async () => {
     if ("showDirectoryPicker" in window) {
       try {
         const dir = await window.showDirectoryPicker();
@@ -385,10 +396,7 @@
         if (files.length) setPlaylist(files);
         else alert("No playable video files found in that folder.");
       } catch (err) {
-        if (err && err.name !== "AbortError") {
-          // Fallback
-          folderInput.click();
-        }
+        if (err && err.name !== "AbortError") folderInput.click();
       }
     } else {
       folderInput.click();
@@ -398,25 +406,30 @@
   /* =========================================================
      DRAG & DROP
      ========================================================= */
-  const dropOverlay = $("#drop-overlay");
-  let dragCount = 0;
+  const showDropOverlay = () => { if (dropOverlay) dropOverlay.hidden = false; };
+  const hideDropOverlay = () => { if (dropOverlay) dropOverlay.hidden = true; };
 
   document.addEventListener("dragenter", (e) => {
-    if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    if (!e.dataTransfer) return;
+    const types = Array.from(e.dataTransfer.types || []);
+    if (!types.includes("Files")) return;
     e.preventDefault();
-    dragCount++;
-    dropOverlay.hidden = false;
+    state.dragCount++;
+    showDropOverlay();
   });
-  document.addEventListener("dragover", (e) => e.preventDefault());
+  document.addEventListener("dragover", (e) => {
+    if (e.dataTransfer) e.preventDefault();
+  });
   document.addEventListener("dragleave", (e) => {
+    if (!e.dataTransfer) return;
     e.preventDefault();
-    dragCount = Math.max(0, dragCount - 1);
-    if (dragCount === 0) dropOverlay.hidden = true;
+    state.dragCount = Math.max(0, state.dragCount - 1);
+    if (state.dragCount === 0) hideDropOverlay();
   });
   document.addEventListener("drop", (e) => {
     e.preventDefault();
-    dragCount = 0;
-    dropOverlay.hidden = true;
+    state.dragCount = 0;
+    hideDropOverlay();
     const files = Array.from(e.dataTransfer?.files || []);
     if (files.length) setPlaylist(files);
   });
@@ -425,15 +438,15 @@
      PLAYER CONTROLS
      ========================================================= */
   const updatePlayPauseUI = () => {
-    const playing = !video.paused && !video.ended && video.readyState > 2;
-    playIcon.hidden = playing;
-    pauseIcon.hidden = !playing;
+    const playing = !video.paused && !video.ended;
+    if (playIcon) playIcon.hidden = playing;
+    if (pauseIcon) pauseIcon.hidden = !playing;
     playPauseBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
-    bigPlay.hidden = playing || !video.src || video.ended;
+    if (bigPlay) {
+      const showBig = !playing && !!video.src && !video.ended;
+      bigPlay.hidden = !showBig;
+    }
   };
-
-  playPauseBtn.addEventListener("click", togglePlay);
-  bigPlay.addEventListener("click", togglePlay);
 
   const togglePlay = () => {
     if (!video.src) return;
@@ -441,31 +454,39 @@
     else video.pause();
   };
 
+  playPauseBtn.addEventListener("click", togglePlay);
+  bigPlay?.addEventListener("click", togglePlay);
+
   skipBack.addEventListener("click", () => {
     video.currentTime = Math.max(0, video.currentTime - 10);
   });
   skipFwd.addEventListener("click", () => {
-    video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10);
+    video.currentTime = Math.min(
+      video.duration || Infinity,
+      video.currentTime + 10
+    );
   });
 
+  /* Volume */
+  const updateVolumeUI = () => {
+    const muted = video.muted || video.volume === 0;
+    if (volIcon) volIcon.hidden = muted;
+    if (muteIcon) muteIcon.hidden = !muted;
+    muteBtn.setAttribute("aria-label", muted ? "Unmute" : "Mute");
+    if (volSlider) volSlider.value = String(muted ? 0 : video.volume);
+  };
   muteBtn.addEventListener("click", () => {
     video.muted = !video.muted;
     updateVolumeUI();
   });
-  volSlider.addEventListener("input", () => {
+  volSlider?.addEventListener("input", () => {
     video.volume = Number(volSlider.value);
     video.muted = video.volume === 0;
     updateVolumeUI();
   });
+  video.addEventListener("volumechange", updateVolumeUI);
 
-  const updateVolumeUI = () => {
-    const muted = video.muted || video.volume === 0;
-    volIcon.hidden = muted;
-    muteIcon.hidden = !muted;
-    muteBtn.setAttribute("aria-label", muted ? "Unmute" : "Mute");
-    volSlider.value = String(muted ? 0 : video.volume);
-  };
-
+  /* Fullscreen */
   fsBtn.addEventListener("click", () => {
     if (!document.fullscreenElement) {
       stage.requestFullscreen?.().catch(() => {});
@@ -475,39 +496,44 @@
   });
   document.addEventListener("fullscreenchange", () => {
     const isFs = !!document.fullscreenElement;
-    fsIcon.hidden = isFs;
-    fsExitIcon.hidden = !isFs;
+    if (fsIcon) fsIcon.hidden = isFs;
+    if (fsExitIcon) fsExitIcon.hidden = !isFs;
   });
 
-  if (document.pictureInPictureEnabled) {
+  /* PiP */
+  if (document.pictureInPictureEnabled && pipBtn) {
     pipBtn.hidden = false;
     pipBtn.addEventListener("click", async () => {
       try {
-        if (document.pictureInPictureElement) await document.exitPictureInPicture();
-        else await video.requestPictureInPicture();
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await video.requestPictureInPicture();
+        }
       } catch {}
     });
   }
 
-  /* ---------- Progress / Seek ---------- */
+  /* ---------- Progress ---------- */
   const updateProgress = () => {
     const d = video.duration;
     if (!isFinite(d) || d <= 0) {
-      playedBar.style.width = "0%";
+      if (playedBar) playedBar.style.width = "0%";
+      if (curTimeEl) curTimeEl.textContent = "0:00";
+      if (durTimeEl) durTimeEl.textContent = "0:00";
       return;
     }
     const pct = (video.currentTime / d) * 100;
-    playedBar.style.width = pct + "%";
-    curTimeEl.textContent = fmtTime(video.currentTime);
-    durTimeEl.textContent = fmtTime(d);
+    if (playedBar) playedBar.style.width = pct + "%";
+    if (curTimeEl) curTimeEl.textContent = fmtTime(video.currentTime);
+    if (durTimeEl) durTimeEl.textContent = fmtTime(d);
 
-    // Buffered
-    if (video.buffered.length) {
+    if (video.buffered.length && bufferBar) {
       const end = video.buffered.end(video.buffered.length - 1);
       bufferBar.style.width = Math.min(100, (end / d) * 100) + "%";
     }
 
-    if (!seek.matches(":active")) {
+    if (seek && document.activeElement !== seek) {
       seek.value = String(Math.round((video.currentTime / d) * 1000));
     }
   };
@@ -515,24 +541,26 @@
   video.addEventListener("timeupdate", updateProgress);
   video.addEventListener("progress", updateProgress);
   video.addEventListener("durationchange", updateProgress);
+
   video.addEventListener("loadedmetadata", () => {
     updateProgress();
     hideOverlay();
     updatePlayPauseUI();
   });
 
-  seek.addEventListener("input", () => {
+  seek?.addEventListener("input", () => {
     const d = video.duration;
     if (!isFinite(d) || d <= 0) return;
     const t = (Number(seek.value) / 1000) * d;
     video.currentTime = t;
-    playedBar.style.width = ((t / d) * 100) + "%";
-    curTimeEl.textContent = fmtTime(t);
+    if (playedBar) playedBar.style.width = ((t / d) * 100) + "%";
+    if (curTimeEl) curTimeEl.textContent = fmtTime(t);
   });
 
   video.addEventListener("playing", () => { hideOverlay(); updatePlayPauseUI(); });
-  video.addEventListener("pause", updatePlayPauseUI);
-  video.addEventListener("ended", updatePlayPauseUI);
+  video.addEventListener("pause",   updatePlayPauseUI);
+  video.addEventListener("play",    updatePlayPauseUI);
+  video.addEventListener("ended",   updatePlayPauseUI);
   video.addEventListener("waiting", () => showLoading("Buffering…"));
   video.addEventListener("canplay", hideOverlay);
   video.addEventListener("error", () => {
@@ -542,11 +570,9 @@
       3: "The video could not be decoded — the codec may be unsupported.",
       4: "The video format is not supported by this browser.",
     };
-    const msg = codes[video.error?.code] || "The video could not be played.";
-    showError(msg);
+    showError(codes[video.error?.code] || "The video could not be played.");
   });
 
-  // Auto-loop single source when loop is on
   video.addEventListener("ended", () => {
     if (state.prefs.loop) {
       video.currentTime = 0;
@@ -554,29 +580,29 @@
     }
   });
 
-  // Keyboard shortcuts
+  /* ---------- Keyboard shortcuts ---------- */
   document.addEventListener("keydown", (e) => {
-    if (e.target.matches("input, textarea, select") || e.target.isContentEditable) return;
-    // Only when player has a source
+    const t = e.target;
+    if (t && (t.matches?.("input, textarea, select") || t.isContentEditable)) return;
     if (!video.src) return;
+
     const k = e.key;
     if (k === " " || k === "k") { e.preventDefault(); togglePlay(); }
-    else if (k === "ArrowLeft") { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); }
+    else if (k === "ArrowLeft")  { e.preventDefault(); video.currentTime = Math.max(0, video.currentTime - 5); }
     else if (k === "ArrowRight") { e.preventDefault(); video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 5); }
     else if (k === "j") { video.currentTime = Math.max(0, video.currentTime - 10); }
     else if (k === "l") { video.currentTime = Math.min(video.duration || Infinity, video.currentTime + 10); }
     else if (k === "m") { video.muted = !video.muted; updateVolumeUI(); }
     else if (k === "f") { fsBtn.click(); }
-    else if (k === "ArrowUp") { e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05); updateVolumeUI(); }
+    else if (k === "ArrowUp")   { e.preventDefault(); video.volume = Math.min(1, video.volume + 0.05); updateVolumeUI(); }
     else if (k === "ArrowDown") { e.preventDefault(); video.volume = Math.max(0, video.volume - 0.05); updateVolumeUI(); }
   });
 
   /* ---------- Auto-hide controls ---------- */
-  let hideTimer = null;
   const scheduleHide = () => {
-    clearTimeout(hideTimer);
+    clearTimeout(state.hideTimer);
     if (video.paused) return;
-    hideTimer = setTimeout(() => {
+    state.hideTimer = setTimeout(() => {
       stage.classList.add("controls-hidden");
     }, 2600);
   };
@@ -589,7 +615,7 @@
   );
   video.addEventListener("play", scheduleHide);
   video.addEventListener("pause", () => {
-    clearTimeout(hideTimer);
+    clearTimeout(state.hideTimer);
     stage.classList.remove("controls-hidden");
   });
 
@@ -598,9 +624,9 @@
      ========================================================= */
   const showView = (view) => {
     state.settingsStack = view === "root" ? ["root"] : ["root", view];
-    $$(".settings-view", settingsPanel).forEach((v) =>
-      (v.hidden = v.dataset.view !== view)
-    );
+    $$(".settings-view", settingsPanel).forEach((v) => {
+      v.hidden = v.dataset.view !== view;
+    });
     settingsBack.hidden = view === "root";
     const titles = {
       root: "Settings",
@@ -633,37 +659,41 @@
 
   document.addEventListener("click", (e) => {
     if (settingsPanel.hidden) return;
-    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) closeSettings();
+    if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+      closeSettings();
+    }
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !settingsPanel.hidden) closeSettings();
   });
 
-  // Open specific views
   $$("[data-open]", settingsPanel).forEach((btn) => {
     btn.addEventListener("click", () => {
       const view = btn.dataset.open;
-      if (view === "speed") buildSpeedList();
+      if (view === "speed")    buildSpeedList();
       else if (view === "quality") buildQualityList();
-      else if (view === "audio") buildAudioList();
-      else if (view === "subs") buildSubsList();
-      else if (view === "aspect") buildAspectList();
+      else if (view === "audio")   buildAudioList();
+      else if (view === "subs")    buildSubsList();
+      else if (view === "aspect")  buildAspectList();
       showView(view);
     });
   });
 
   /* ---------- Speed ---------- */
   const buildSpeedList = () => {
+    if (!speedView) return;
     speedView.innerHTML = "";
     SPEEDS.forEach((s) => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "choice" + (s === state.prefs.speed ? " selected" : "");
-      btn.innerHTML = `<span>${s}×</span>
+      btn.innerHTML = `
+        <span>${s}×</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", () => {
         state.prefs.speed = s;
         video.playbackRate = s;
-        valSpeed.textContent = s + "×";
+        if (valSpeed) valSpeed.textContent = s + "×";
         savePrefs();
         buildSpeedList();
       });
@@ -671,14 +701,19 @@
     });
   };
 
-  /* ---------- Quality (HLS only) ---------- */
+  /* ---------- Quality ---------- */
   const buildQualityList = () => {
+    if (!qualityList) return;
     qualityList.innerHTML = "";
+
     const addChoice = (id, label, selected, disabled, onClick) => {
       const btn = document.createElement("button");
-      btn.className = "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+      btn.type = "button";
+      btn.className =
+        "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
       btn.disabled = !!disabled;
-      btn.innerHTML = `<span>${label}</span>
+      btn.innerHTML = `
+        <span>${label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", onClick);
       qualityList.appendChild(btn);
@@ -686,20 +721,20 @@
 
     if (!state.hls) {
       addChoice("single", "Single quality (source file)", true, true, () => {});
-      valQuality.textContent = "Auto";
+      if (valQuality) valQuality.textContent = "Auto";
       return;
     }
 
     const current = state.hls.currentLevel;
     addChoice("auto", "Auto", current === -1, false, () => {
       state.hls.currentLevel = -1;
-      valQuality.textContent = "Auto";
+      if (valQuality) valQuality.textContent = "Auto";
       buildQualityList();
     });
     state.qualityLevels.forEach((q) => {
       addChoice(q.id, q.label, current === q.id, false, () => {
         state.hls.currentLevel = q.id;
-        valQuality.textContent = q.label;
+        if (valQuality) valQuality.textContent = q.label;
         buildQualityList();
       });
     });
@@ -707,6 +742,7 @@
 
   /* ---------- Audio tracks ---------- */
   const buildAudioList = () => {
+    if (!audioList) return;
     audioList.innerHTML = "";
     const tracks = video.audioTracks ? Array.from(video.audioTracks) : [];
     if (!tracks.length) {
@@ -715,17 +751,19 @@
       p.textContent =
         "This browser/media does not expose multiple audio tracks. Switching tracks requires an implementation that supports it.";
       audioList.appendChild(p);
-      valAudio.textContent = "Default";
+      if (valAudio) valAudio.textContent = "Default";
       return;
     }
     tracks.forEach((t, i) => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "choice" + (t.enabled ? " selected" : "");
-      btn.innerHTML = `<span>${t.label || t.language || "Track " + (i + 1)}</span>
+      btn.innerHTML = `
+        <span>${t.label || t.language || "Track " + (i + 1)}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", () => {
         tracks.forEach((x) => (x.enabled = x === t));
-        valAudio.textContent = t.label || t.language || `Track ${i + 1}`;
+        if (valAudio) valAudio.textContent = t.label || t.language || `Track ${i + 1}`;
         buildAudioList();
       });
       audioList.appendChild(btn);
@@ -733,34 +771,46 @@
   };
 
   /* ---------- Subtitles ---------- */
+  const hasActiveSub = () =>
+    Array.from(video.textTracks || []).some((t) => t.mode === "showing");
+
+  const disableAllSubs = () => {
+    Array.from(video.textTracks || []).forEach((t) => (t.mode = "disabled"));
+  };
+
   const buildSubsList = () => {
+    if (!subsList) return;
     subsList.innerHTML = "";
-    const addChoice = (id, label, selected, disabled, onClick) => {
+
+    const addChoice = (label, selected, disabled, onClick) => {
       const btn = document.createElement("button");
-      btn.className = "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
+      btn.type = "button";
+      btn.className =
+        "choice" + (selected ? " selected" : "") + (disabled ? " disabled" : "");
       btn.disabled = !!disabled;
-      btn.innerHTML = `<span>${label}</span>
+      btn.innerHTML = `
+        <span>${label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", onClick);
       subsList.appendChild(btn);
     };
 
-    addChoice("off", "Off", !hasActiveSub(), false, () => {
+    addChoice("Off", !hasActiveSub(), false, () => {
       disableAllSubs();
-      valSubs.textContent = "Off";
+      if (valSubs) valSubs.textContent = "Off";
       buildSubsList();
     });
 
-    const textTracks = Array.from(video.textTracks).filter(
+    const textTracks = Array.from(video.textTracks || []).filter(
       (t) => t.kind === "subtitles" || t.kind === "captions"
     );
 
     if (textTracks.length) {
       textTracks.forEach((t, i) => {
         const label = t.label || t.language || `Track ${i + 1}`;
-        addChoice(`tt-${i}`, label, t.mode === "showing", false, () => {
+        addChoice(label, t.mode === "showing", false, () => {
           textTracks.forEach((x) => (x.mode = x === t ? "showing" : "disabled"));
-          valSubs.textContent = label;
+          if (valSubs) valSubs.textContent = label;
           buildSubsList();
         });
       });
@@ -771,45 +821,38 @@
         "No embedded subtitle tracks found. Load an external .vtt file below.";
       subsList.appendChild(p);
     }
-
-    valSubs.textContent = hasActiveSub() ? valSubs.textContent : "Off";
   };
 
-  const hasActiveSub = () =>
-    Array.from(video.textTracks).some((t) => t.mode === "showing");
-
-  const disableAllSubs = () => {
-    Array.from(video.textTracks).forEach((t) => (t.mode = "disabled"));
-  };
-
-  subtitleFile.addEventListener("change", (e) => {
+  subtitleFile?.addEventListener("change", (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!/\.vtt$/i.test(f.name)) {
-      alert("Only WebVTT (.vtt) files are supported natively. Convert .srt / .ass first.");
+      alert(
+        "Only WebVTT (.vtt) files are supported natively. Convert .srt / .ass first."
+      );
       subtitleFile.value = "";
       return;
     }
     const url = URL.createObjectURL(f);
     if (state.externalSubUrl) URL.revokeObjectURL(state.externalSubUrl);
     state.externalSubUrl = url;
+
+    $$("track[data-external]", video).forEach((t) => t.remove());
     const track = document.createElement("track");
     track.kind = "subtitles";
     track.label = f.name;
     track.srclang = "en";
     track.src = url;
     track.default = true;
-    // Remove old external track
-    $$("track[data-external]", video).forEach((t) => t.remove());
     track.dataset.external = "true";
     video.appendChild(track);
-    // Enable it
+
     setTimeout(() => {
       const tt = Array.from(video.textTracks).find((t) => t.label === f.name);
       if (tt) {
         Array.from(video.textTracks).forEach((t) => (t.mode = "disabled"));
         tt.mode = "showing";
-        valSubs.textContent = f.name;
+        if (valSubs) valSubs.textContent = f.name;
       }
       buildSubsList();
     }, 100);
@@ -818,16 +861,19 @@
 
   /* ---------- Aspect ratio ---------- */
   const buildAspectList = () => {
+    if (!aspectList) return;
     aspectList.innerHTML = "";
     ASPECTS.forEach((a) => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "choice" + (a.id === state.prefs.aspect ? " selected" : "");
-      btn.innerHTML = `<span>${a.label}</span>
+      btn.innerHTML = `
+        <span>${a.label}</span>
         <svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
       btn.addEventListener("click", () => {
         state.prefs.aspect = a.id;
         applyAspect();
-        valAspect.textContent = a.label;
+        if (valAspect) valAspect.textContent = a.label;
         savePrefs();
         buildAspectList();
       });
@@ -836,26 +882,26 @@
   };
 
   /* ---------- Ambient / Loop / Reset ---------- */
-  toggleAmbient.addEventListener("change", () => {
+  toggleAmbient?.addEventListener("change", () => {
     state.prefs.ambient = toggleAmbient.checked;
     stage.classList.toggle("ambient-on", state.prefs.ambient);
     savePrefs();
   });
-  toggleLoop.addEventListener("change", () => {
+  toggleLoop?.addEventListener("change", () => {
     state.prefs.loop = toggleLoop.checked;
     savePrefs();
   });
-  resetBtn.addEventListener("click", () => {
+  resetBtn?.addEventListener("click", () => {
     state.prefs.speed = 1;
     state.prefs.aspect = "fit";
     state.prefs.loop = false;
     state.prefs.ambient = false;
     video.playbackRate = 1;
     applyAspect();
-    toggleLoop.checked = false;
-    toggleAmbient.checked = false;
-    valSpeed.textContent = "1×";
-    valAspect.textContent = "Fit";
+    if (toggleLoop) toggleLoop.checked = false;
+    if (toggleAmbient) toggleAmbient.checked = false;
+    if (valSpeed) valSpeed.textContent = "1×";
+    if (valAspect) valAspect.textContent = "Fit";
     savePrefs();
     closeSettings();
   });
@@ -866,6 +912,7 @@
   const savePrefs = () => {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch {}
   };
+
   const loadPrefs = () => {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
@@ -874,22 +921,17 @@
     video.volume = state.prefs.volume;
     video.muted = state.prefs.muted;
     video.playbackRate = state.prefs.speed;
-    toggleLoop.checked = state.prefs.loop;
-    toggleAmbient.checked = state.prefs.ambient;
+    if (toggleLoop) toggleLoop.checked = state.prefs.loop;
+    if (toggleAmbient) toggleAmbient.checked = state.prefs.ambient;
     stage.classList.toggle("ambient-on", state.prefs.ambient);
-    valSpeed.textContent = state.prefs.speed + "×";
-    valAspect.textContent =
-      (ASPECTS.find((a) => a.id === state.prefs.aspect) || ASPECTS[0]).label;
+    if (valSpeed) valSpeed.textContent = state.prefs.speed + "×";
+    if (valAspect) {
+      valAspect.textContent =
+        (ASPECTS.find((a) => a.id === state.prefs.aspect) || ASPECTS[0]).label;
+    }
     applyAspect();
     updateVolumeUI();
   };
-
-  // Save volume on change
-  video.addEventListener("volumechange", () => {
-    state.prefs.volume = video.muted ? 0 : video.volume;
-    state.prefs.muted = video.muted;
-    savePrefs();
-  });
 
   /* =========================================================
      INIT
@@ -898,26 +940,31 @@
     loadPrefs();
     updatePlayPauseUI();
     updateVolumeUI();
-    $("#year").textContent = new Date().getFullYear();
-    // Prevent page scroll for space/etc handled in keydown above.
-    // Page-wide search (nice-to-have)
+
+    const year = $("#year");
+    if (year) year.textContent = new Date().getFullYear();
+
+    /* Page search (simple, in-page). */
     const pageSearch = $("#page-search");
-    if (pageSearch) {
-      pageSearch.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter") return;
-        const q = pageSearch.value.trim().toLowerCase();
-        if (!q) return;
-        const target = $$("h2, h3, .card h3, .format-card h3").find((el) =>
-          el.textContent.toLowerCase().includes(q)
-        );
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
-          target.classList.add("search-flash");
-          setTimeout(() => target.classList.remove("search-flash"), 1600);
-        }
-      });
-    }
+    pageSearch?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const q = pageSearch.value.trim().toLowerCase();
+      if (!q) return;
+      const targets = $$("h2, h3, .card h3, .format-card h3");
+      const hit = targets.find((el) =>
+        el.textContent.toLowerCase().includes(q)
+      );
+      if (hit) {
+        hit.scrollIntoView({ behavior: "smooth", block: "center" });
+        hit.classList.add("search-flash");
+        setTimeout(() => hit.classList.remove("search-flash"), 1600);
+      }
+    });
   };
 
-  init();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
