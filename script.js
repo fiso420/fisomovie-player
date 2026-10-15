@@ -1,544 +1,397 @@
 /* =========================================================
-   FISOMOVIE PLAYER — app logic (movi-player edition)
+   FISOMOVIE PLAYER — stylesheet (movi-player edition)
    ========================================================= */
-(() => {
-  "use strict";
+*,*::before,*::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
+[hidden] { display: none !important; }
 
-  const $  = (s, r = document) => r.querySelector(s);
-  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+:root {
+  --accent: #7c6cf0;
+  --accent-2: #60a5fa;
+  --accent-hover: #9184f5;
+  --accent-glow: rgba(124, 108, 240, 0.35);
 
-  /* ---------- Config ---------- */
-  const PREFS_KEY    = "fiso-prefs";
-  const THEME_KEY    = "fiso-theme";
-  const ACCENT_KEY   = "fiso-accent";
-  const COMMENTS_KEY = "fiso-comments";
+  --bg: #0b0d14;
+  --bg-elev: #11141d;
+  --bg-card: #151926;
+  --bg-soft: rgba(255, 255, 255, 0.04);
+  --bg-soft-2: rgba(255, 255, 255, 0.07);
 
-  /* Bad-word filter — add more words here */
-  const BAD_WORDS = [
-    "fuck","shit","bitch","asshole","bastard","damn","cunt","dick","pussy",
-    "slut","whore","nigger","nigga","faggot","retard","cock","twat","wanker",
-    "motherfucker","bullshit","piss","crap"
-  ];
-  const BAD_RE = new RegExp("\\b(" + BAD_WORDS.join("|") + ")\\b", "i");
+  --text: #eef1f8;
+  --text-2: #a6adc0;
+  --text-3: #6d7488;
 
-  /* ---------- DOM ---------- */
-  const player       = $("#movi-player");
-  const stage        = $("#video-stage");
-  const overlay      = $("#stage-overlay");
-  const overlayMsg   = $("#stage-message");
-  const spinner      = $("#stage-spinner");
-  const cutModal     = $("#cut-modal");
-  const cutMessage   = $("#cut-message");
-  const cutContinue  = $("#cut-continue");
-  const cutRestart   = $("#cut-restart");
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
 
-  const urlInput   = $("#url-input");
-  const loadBtn    = $("#load-btn");
-  const pasteBtn   = $("#paste-btn");
-  const urlError   = $("#url-error");
-  const fileInput  = $("#file-input");
-  const folderBtn  = $("#folder-btn");
-  const folderInput = $("#folder-input");
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
 
-  const playlistEl    = $("#playlist");
-  const playlistItems = $("#playlist-items");
-  const playlistCount = $("#playlist-count");
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
-  const dropOverlay = $("#drop-overlay");
+  --shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.35);
 
-  /* ---------- State ---------- */
-  const state = {
-    sources: [],
-    currentIndex: -1,
-    objectUrls: [],
-    dragCount: 0,
-    stallTimer: 0,
-    lastTime: 0,
-  };
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #f5f7fb; --bg-elev: #ffffff; --bg-card: #ffffff;
+  --bg-soft: rgba(10, 15, 40, 0.03); --bg-soft-2: rgba(10, 15, 40, 0.06);
+  --text: #0d1228; --text-2: #4b5568; --text-3: #8089a0;
+  --border: rgba(10, 15, 40, 0.08); --border-strong: rgba(10, 15, 40, 0.16);
+  --shadow-lg: 0 30px 60px rgba(30, 45, 90, 0.12);
+  --shadow-sm: 0 6px 18px rgba(30, 45, 90, 0.08);
+  color-scheme: light;
+}
 
-  /* =========================================================
-     THEME + ACCENT
-     ========================================================= */
-  const themeToggle = $("#theme-toggle");
-  try {
-    const t = localStorage.getItem(THEME_KEY);
-    if (t) document.documentElement.dataset.theme = t;
-  } catch {}
-  themeToggle.addEventListener("click", () => {
-    const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem(THEME_KEY, next); } catch {}
-  });
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+img, svg { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; }
 
-  const accentPicker = $("#accent-picker");
-  const hexToRgb = (hex) => {
-    const h = hex.replace("#", "");
-    const n = parseInt(h, 16);
-    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-  };
-  const applyAccent = (hex) => {
-    document.documentElement.style.setProperty("--accent", hex);
-    const [r, g, b] = hexToRgb(hex);
-    document.documentElement.style.setProperty("--accent-glow", `rgba(${r},${g},${b},0.35)`);
-    const lr = Math.min(255, r + 30), lg = Math.min(255, g + 30), lb = Math.min(255, b + 30);
-    document.documentElement.style.setProperty("--accent-hover", `rgb(${lr},${lg},${lb})`);
-    accentPicker.value = hex;
-    // Also pass to movi-player CSS vars
-    if (player) {
-      player.style.setProperty("--movi-accent", hex);
-      player.style.setProperty("--movi-progress-color", hex);
-      player.style.setProperty("--movi-btn-hover-bg", `rgba(${r},${g},${b},0.22)`);
-    }
-  };
-  try {
-    const savedAccent = localStorage.getItem(ACCENT_KEY);
-    if (savedAccent) applyAccent(savedAccent);
-  } catch {}
-  accentPicker.addEventListener("input", () => {
-    applyAccent(accentPicker.value);
-    try { localStorage.setItem(ACCENT_KEY, accentPicker.value); } catch {}
-  });
+.skip-link {
+  position: fixed; top: 0.5rem; left: 0.5rem; z-index: 9999;
+  padding: 0.6rem 0.9rem; background: var(--accent); color: #fff;
+  border-radius: var(--radius-sm); text-decoration: none;
+  transform: translateY(-150%); transition: transform 0.2s;
+}
+.skip-link:focus { transform: translateY(0); }
 
-  /* =========================================================
-     HELPERS
-     ========================================================= */
-  const showOverlay = (msg, loading) => {
-    overlay.hidden = false;
-    spinner.style.display = loading ? "block" : "none";
-    overlayMsg.textContent = msg;
-  };
-  const showLoading = (m) => showOverlay(m || "Loading…", true);
-  const showError   = (m) => showOverlay(m, false);
-  const hideOverlay = () => { overlay.hidden = true; };
+/* HEADER */
+.navbar {
+  position: sticky; top: 0; z-index: 100;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: 1280px; margin: 0 auto;
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 0.85rem 1.25rem;
+}
+.brand {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  text-decoration: none; color: var(--text);
+  font-weight: 800; letter-spacing: -0.02em; flex-shrink: 0;
+}
+.brand-mark { width: 30px; height: 30px; }
+.brand-thin { font-weight: 500; color: var(--text-2); }
+.brand-name { font-size: 1.02rem; }
 
-  const isValidUrl = (s) => {
-    try {
-      const u = new URL(s);
-      return u.protocol === "http:" || u.protocol === "https:";
-    } catch { return false; }
-  };
+.nav-links { display: flex; gap: 0.4rem; margin-left: 1rem; }
+.nav-links a {
+  padding: 0.5rem 0.85rem; border-radius: var(--radius-sm);
+  color: var(--text-2); text-decoration: none;
+  font-size: 0.9rem; font-weight: 500;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-links a:hover { color: var(--text); background: var(--bg-soft); }
 
-  /* =========================================================
-     TABS
-     ========================================================= */
-  $$(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      $$(".tab").forEach((t) => {
-        const on = t === tab;
-        t.classList.toggle("active", on);
-        t.setAttribute("aria-selected", on ? "true" : "false");
-      });
-      $$(".pane").forEach((p) => p.classList.toggle("active", p.dataset.pane === tab.dataset.tab));
-    });
-  });
+.nav-actions { margin-left: auto; display: flex; align-items: center; gap: 0.5rem; }
+.nav-search {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.45rem 0.8rem; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--bg-soft); width: 200px;
+}
+.nav-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.nav-search svg { width: 16px; height: 16px; color: var(--text-3); flex-shrink: 0; }
+.nav-search input { background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 0.85rem; width: 100%; min-width: 0; }
+.nav-search input::placeholder { color: var(--text-3); }
 
-  /* =========================================================
-     SOURCE LOADING — via movi-player
-     ========================================================= */
-  const clearObjectUrls = () => {
-    state.objectUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
-    state.objectUrls = [];
-  };
+.color-picker {
+  position: relative; width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--bg-soft);
+  border-radius: 50%; color: var(--text-2); cursor: pointer; overflow: hidden;
+}
+.color-picker input[type="color"] {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; border: 0; padding: 0;
+}
+.color-picker svg { width: 18px; height: 18px; pointer-events: none; }
 
-  const loadUrl = async (url) => {
-    if (!player) return;
-    showLoading("Fetching stream…");
-    try {
-      // movi-player accepts src as a URL string or a File object
-      player.src = url;
-      player.load?.();
-      player.play?.().catch(() => {});
-    } catch (err) {
-      showError(err.message || "Could not load the source.");
-    }
-  };
+.icon-btn {
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--bg-soft);
+  border-radius: 50%; color: var(--text-2); text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.icon-btn svg { width: 18px; height: 18px; }
 
-  const loadFile = async (file) => {
-    if (!player) return;
-    showLoading("Opening file…");
-    try {
-      // setFile() is the correct way to pass a File to movi-player
-      if (typeof player.setFile === "function") {
-        player.setFile(file);
-      } else {
-        player.src = file;
-      }
-      player.play?.().catch(() => {});
-    } catch (err) {
-      showError(err.message || "Could not open the file.");
-    }
-  };
+[data-theme="dark"] .i-moon { display: none; }
+[data-theme="light"] .i-sun { display: none; }
 
-  /* =========================================================
-     URL INPUT
-     ========================================================= */
-  loadBtn.addEventListener("click", async () => {
-    urlError.hidden = true;
-    const val = urlInput.value.trim();
-    if (!val) {
-      urlError.textContent = "Please paste a video URL.";
-      urlError.hidden = false;
-      urlInput.focus(); return;
-    }
-    if (!isValidUrl(val)) {
-      urlError.textContent = "That doesn't look like a valid media URL. Use a direct link to a video file or HLS .m3u8 stream.";
-      urlError.hidden = false; return;
-    }
-    loadBtn.disabled = true;
-    try {
-      clearPlaylist();
-      await loadUrl(val);
-    } finally {
-      loadBtn.disabled = false;
-    }
-  });
+/* HERO */
+.hero { position: relative; padding: 5rem 1.25rem 3rem; overflow: hidden; }
+.hero-bg { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.5; }
+.orb-1 { width: 480px; height: 480px; background: var(--accent); top: -120px; left: -80px; }
+.orb-2 { width: 420px; height: 420px; background: var(--accent-2); top: 40%; right: -120px; opacity: 0.35; }
 
-  urlInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); loadBtn.click(); }
-  });
+.hero-inner { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; text-align: center; animation: fadeUp 0.7s ease-out both; }
+.eyebrow {
+  display: inline-block; padding: 0.35rem 0.75rem;
+  font: 600 0.72rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 999px; margin-bottom: 1.1rem;
+}
+.hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); line-height: 1.06; letter-spacing: -0.03em; margin: 0 0 1rem; font-weight: 800; }
+.grad { background: linear-gradient(110deg, var(--accent) 10%, var(--accent-2) 90%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-sub { color: var(--text-2); font-size: 1.05rem; max-width: 560px; margin: 0 auto 2rem; }
 
-  if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
-    pasteBtn.hidden = false;
-    pasteBtn.addEventListener("click", async () => {
-      try {
-        const text = (await navigator.clipboard.readText()).trim();
-        if (text) { urlInput.value = text; urlInput.focus(); }
-      } catch { urlInput.focus(); }
-    });
-  }
+.input-panel { background: var(--bg-elev); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.85rem; box-shadow: var(--shadow-sm); text-align: left; max-width: 720px; margin: 0 auto; }
+.tabs { display: flex; gap: 0.25rem; padding: 0.25rem; background: var(--bg-soft); border-radius: var(--radius); margin-bottom: 0.85rem; }
+.tab { flex: 1; padding: 0.55rem 0.9rem; border: none; background: none; color: var(--text-2); font-weight: 600; font-size: 0.85rem; border-radius: var(--radius-sm); transition: color 0.15s, background 0.15s; }
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--bg-elev); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-  /* =========================================================
-     FILES & PLAYLIST
-     ========================================================= */
-  const isPlayableFile = (f) => {
-    const name = (f.name || "").toLowerCase();
-    if (f.type && (f.type.startsWith("video/") || f.type.startsWith("audio/"))) return true;
-    return /\.(mp4|m4v|webm|mkv|mov|avi|flv|ts|m2ts|mp3|m4a|aac|flac|wav|ogg|oga|opus)$/.test(name);
-  };
-  const naturalSort = (a, b) =>
-    a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+.pane { display: none; }
+.pane.active { display: block; }
 
-  const setPlaylist = (files) => {
-    const vids = files.filter(isPlayableFile).sort(naturalSort);
-    if (!vids.length) return;
-    clearObjectUrls();
-    clearPlaylist();
-    state.sources = vids.map((f) => ({ name: f.name, file: f }));
-    renderPlaylist();
-    playIndex(0);
-  };
+.url-row { display: flex; gap: 0.4rem; align-items: center; }
+.url-row input[type="text"] {
+  flex: 1; min-width: 0; padding: 0.85rem 1rem;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font: inherit; font-size: 0.92rem; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.url-row input::placeholder { color: var(--text-3); }
+.url-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
-  const clearPlaylist = () => {
-    state.sources = [];
-    state.currentIndex = -1;
-    if (playlistEl) playlistEl.hidden = true;
-    if (playlistItems) playlistItems.innerHTML = "";
-    if (playlistCount) playlistCount.textContent = "0";
-  };
+.paste-btn {
+  width: 42px; height: 42px; display: grid; place-items: center;
+  border: 1px solid var(--border); background: var(--bg-soft);
+  color: var(--text-2); border-radius: var(--radius-sm);
+  flex-shrink: 0; transition: color 0.15s, border-color 0.15s;
+}
+.paste-btn:hover { color: var(--accent); border-color: var(--accent); }
+.paste-btn svg { width: 17px; height: 17px; }
 
-  const renderPlaylist = () => {
-    playlistEl.hidden = state.sources.length <= 1;
-    playlistItems.innerHTML = "";
-    playlistCount.textContent = String(state.sources.length);
-    state.sources.forEach((src, i) => {
-      const li = document.createElement("li");
-      li.dataset.index = String(i);
-      if (i === state.currentIndex) li.classList.add("active");
-      const idx = document.createElement("span");
-      idx.className = "idx"; idx.textContent = String(i + 1);
-      const name = document.createElement("span");
-      name.className = "name"; name.textContent = src.name;
-      li.append(idx, name);
-      li.addEventListener("click", () => playIndex(i));
-      playlistItems.appendChild(li);
-    });
-  };
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.3rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font: 600 0.9rem/1 var(--font);
+  transition: transform 0.12s, box-shadow 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--accent-glow); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-  const playIndex = async (i) => {
-    if (i < 0 || i >= state.sources.length) return;
-    state.currentIndex = i;
-    $$(".playlist li").forEach((li) =>
-      li.classList.toggle("active", Number(li.dataset.index) === i));
-    const src = state.sources[i];
-    await loadFile(src.file);
-  };
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.3rem; background: var(--bg-soft);
+  color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font: 600 0.9rem/1 var(--font);
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-ghost:hover { background: var(--bg-soft-2); border-color: var(--border-strong); }
 
-  fileInput.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) setPlaylist(files);
-    fileInput.value = "";
-  });
-  folderInput.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length) setPlaylist(files);
-    folderInput.value = "";
-  });
-  folderBtn.addEventListener("click", async () => {
-    if ("showDirectoryPicker" in window) {
-      try {
-        const dir = await window.showDirectoryPicker();
-        const files = [];
-        for await (const entry of dir.values()) {
-          if (entry.kind === "file") {
-            const f = await entry.getFile();
-            if (isPlayableFile(f)) files.push(f);
-          }
-        }
-        if (files.length) setPlaylist(files);
-        else alert("No playable video files found in that folder.");
-      } catch (err) {
-        if (err && err.name !== "AbortError") folderInput.click();
-      }
-    } else folderInput.click();
-  });
+.pane[data-pane="folder"] { text-align: center; padding: 1rem 0; }
+.hint { color: var(--text-3); font-size: 0.8rem; margin: 0.7rem 0 0; padding: 0 0.25rem; }
+.error { color: #f87171; font-size: 0.82rem; margin: 0.5rem 0 0; padding: 0 0.25rem; }
 
-  /* =========================================================
-     DRAG & DROP
-     ========================================================= */
-  document.addEventListener("dragenter", (e) => {
-    if (!e.dataTransfer) return;
-    const types = Array.from(e.dataTransfer.types || []);
-    if (!types.includes("Files")) return;
-    e.preventDefault();
-    state.dragCount++;
-    dropOverlay.hidden = false;
-  });
-  document.addEventListener("dragover", (e) => { if (e.dataTransfer) e.preventDefault(); });
-  document.addEventListener("dragleave", (e) => {
-    if (!e.dataTransfer) return;
-    e.preventDefault();
-    state.dragCount = Math.max(0, state.dragCount - 1);
-    if (state.dragCount === 0) dropOverlay.hidden = true;
-  });
-  document.addEventListener("drop", (e) => {
-    e.preventDefault();
-    state.dragCount = 0;
-    dropOverlay.hidden = true;
-    const files = Array.from(e.dataTransfer?.files || []);
-    if (files.length) setPlaylist(files);
-  });
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  padding: 2rem 1rem; border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius); background: var(--bg-soft);
+  color: var(--text-2); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.dropzone:hover, .dropzone:focus-visible { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.dropzone svg { width: 32px; height: 32px; }
+.dropzone strong { font-size: 0.95rem; }
+.dropzone small { font-size: 0.8rem; color: var(--text-3); }
 
-  /* =========================================================
-     MOVI-PLAYER EVENT LISTENERS
-     ========================================================= */
-  // State changes (loading, buffering, playing, paused, ended, error)
-  player.addEventListener("statechange", (e) => {
-    const s = e.detail;
-    if (s === "loading") showLoading("Loading…");
-    else if (s === "buffering") showLoading("Buffering…");
-    else if (s === "ready") hideOverlay();
-    else if (s === "playing") hideOverlay();
-    else if (s === "error") {
-      const err = player.error || "Playback error.";
-      showError(err);
-    }
-  });
+.trust-row { list-style: none; padding: 0; display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; margin: 2rem 0 0; color: var(--text-3); font-size: 0.82rem; }
+.trust-row li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.trust-row svg { width: 15px; height: 15px; color: var(--accent); }
 
-  player.addEventListener("loadeddata", () => {
-    hideOverlay();
-    state.lastTime = 0;
-  });
+/* PLAYER (movi-player) */
+.player-section { padding: 1rem 1.25rem 3rem; max-width: 1200px; margin: 0 auto; }
+.player-frame { position: relative; display: flex; gap: 1rem; align-items: flex-start; }
+.player-frame:has(.playlist:not([hidden])) .video-stage { flex: 1; min-width: 0; }
 
-  player.addEventListener("play", () => { hideOverlay(); hideCutModal(); });
-  player.addEventListener("pause", () => { clearTimeout(state.stallTimer); });
-  player.addEventListener("ended", () => { clearTimeout(state.stallTimer); });
+.video-stage {
+  position: relative; aspect-ratio: 16/9; width: 100%;
+  background: #000; border-radius: var(--radius-lg);
+  overflow: hidden; box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+}
+movi-player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  --movi-accent: var(--accent);
+  --movi-progress-color: var(--accent);
+  --movi-btn-hover-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+}
 
-  // Track changes — this is where audio tracks show up
-  player.addEventListener("trackschange", (e) => {
-    const tracks = e.detail;
-    console.log("Tracks changed:", tracks);
-  });
-  player.addEventListener("audiotrackchange", (e) => {
-    console.log("Audio track changed:", e.detail);
-  });
-  player.addEventListener("qualitychange", (e) => {
-    console.log("Quality changed:", e.detail);
-  });
+.stage-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.62); color: #fff; gap: 1rem;
+  font-size: 0.92rem; z-index: 4; text-align: center; padding: 1rem;
+}
+.spinner {
+  width: 34px; height: 34px;
+  border: 3px solid rgba(255,255,255,0.18);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  // Error handling
-  player.addEventListener("error", (e) => {
-    const err = e.detail || player.error;
-    showError(String(err));
-  });
+.cut-modal {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
+  padding: 1rem;
+}
+.cut-inner {
+  background: var(--bg-elev); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 1.6rem; max-width: 380px; width: 100%; text-align: center;
+}
+.cut-inner svg { width: 40px; height: 40px; color: #fbbf24; margin: 0 auto 0.6rem; }
+.cut-inner h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.cut-inner p { margin: 0 0 1.1rem; color: var(--text-2); font-size: 0.88rem; }
+.cut-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 
-  /* =========================================================
-     CUT / STALL DETECTION — Continue / Restart
-     ========================================================= */
-  const showCutModal = (msg) => {
-    cutMessage.textContent = msg || "The video stream was cut or the network dropped.";
-    cutModal.hidden = false;
-  };
-  const hideCutModal = () => { cutModal.hidden = true; };
+/* PLAYLIST */
+.playlist {
+  width: 320px; flex-shrink: 0;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); max-height: 72vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.playlist-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border); font-size: 0.9rem;
+}
+.playlist-head span { font-size: 0.75rem; padding: 0.15rem 0.5rem; background: var(--bg-soft); border-radius: 999px; color: var(--text-3); font-family: var(--mono); }
+.playlist ul { list-style: none; margin: 0; padding: 0.35rem; overflow-y: auto; flex: 1; }
+.playlist li {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.65rem; border-radius: var(--radius-sm);
+  color: var(--text-2); font-size: 0.85rem; cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.playlist li:hover { background: var(--bg-soft); color: var(--text); }
+.playlist li.active { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); }
+.playlist li .idx { width: 22px; text-align: right; font-family: var(--mono); font-size: 0.72rem; color: var(--text-3); }
+.playlist li .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  cutContinue.addEventListener("click", () => {
-    hideCutModal();
-    if (state.lastTime > 0) player.currentTime = state.lastTime;
-    player.play?.().catch(() => {});
-  });
-  cutRestart.addEventListener("click", () => {
-    hideCutModal();
-    player.currentTime = 0;
-    player.play?.().catch(() => {});
-  });
+/* SECTIONS */
+.section { padding: 4rem 1.25rem; }
+.section.alt { background: color-mix(in srgb, var(--bg-elev) 60%, transparent); }
+.section-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
+.section-inner.narrow { max-width: 720px; }
+.section h2 { font-size: clamp(1.6rem, 3.4vw, 2.3rem); letter-spacing: -0.025em; margin: 0 0 0.7rem; font-weight: 700; }
+.section-sub { color: var(--text-2); margin: 0 0 2.5rem; }
 
-  // Track last good time + detect stalls
-  player.addEventListener("timeupdate", (e) => {
-    const t = e.detail;
-    if (typeof t === "number" && !player.paused && !player.ended) {
-      state.lastTime = t;
-      clearTimeout(state.stallTimer);
-      state.stallTimer = setTimeout(() => {
-        if (!player.paused && !player.ended) {
-          showCutModal("Playback looks stalled. Network drop or stream cut?");
-        }
-      }, 12000);
-    }
-  });
+.format-grid, .cards { display: grid; gap: 1rem; text-align: left; }
+.format-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
-  /* =========================================================
-     COMMENTS (localStorage + bad-word filter)
-     ========================================================= */
-  const commentForm = $("#comment-form");
-  const commentName = $("#comment-name");
-  const commentBody = $("#comment-body");
-  const commentCounter = $("#comment-count");
-  const commentSubmit = $("#comment-submit");
-  const commentStatus = $("#comment-status");
-  const commentList = $("#comment-list");
+.format-card, .card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.2rem;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.format-card:hover, .card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.format-card h3, .card h3 { font-size: 0.95rem; margin: 0 0 0.8rem; font-weight: 600; }
+.card p { margin: 0; color: var(--text-2); font-size: 0.87rem; }
 
-  const loadComments = () => {
-    try { return JSON.parse(localStorage.getItem(COMMENTS_KEY) || "[]"); }
-    catch { return []; }
-  };
-  const saveComments = (arr) => {
-    try { localStorage.setItem(COMMENTS_KEY, JSON.stringify(arr)); } catch {}
-  };
+.chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip { font: 500 0.74rem/1 var(--mono); padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text-2); }
+.chip.good { color: #4ade80; border-color: color-mix(in srgb, #4ade80 35%, transparent); background: color-mix(in srgb, #4ade80 8%, transparent); }
+.chip.warn { color: #fbbf24; border-color: color-mix(in srgb, #fbbf24 35%, transparent); background: color-mix(in srgb, #fbbf24 8%, transparent); }
 
-  const relTime = (ms) => {
-    const diff = Date.now() - ms;
-    if (diff < 60_000) return "just now";
-    const m = Math.floor(diff / 60_000); if (m < 60) return m + "m ago";
-    const h = Math.floor(m / 60); if (h < 24) return h + "h ago";
-    const d = Math.floor(h / 24); if (d < 30) return d + "d ago";
-    return new Date(ms).toLocaleDateString();
-  };
+.footnote { color: var(--text-3); font-size: 0.78rem; margin: 1.5rem 0 0; }
 
-  const renderComment = (c) => {
-    const card = document.createElement("div");
-    card.className = "comment-card";
-    const head = document.createElement("div");
-    head.className = "comment-card-head";
-    const av = document.createElement("div");
-    av.className = "comment-avatar";
-    av.textContent = (c.name || "?").trim().charAt(0).toUpperCase() || "?";
-    av.style.background = `hsl(${(c.name || "anon").split("").reduce((a, ch) => a + ch.charCodeAt(0), 0) % 360}, 60%, 45%)`;
-    const author = document.createElement("span");
-    author.className = "comment-author";
-    author.textContent = c.name || "Anonymous";
-    const time = document.createElement("time");
-    time.className = "comment-time";
-    time.textContent = relTime(c.createdAt);
-    head.append(av, author, time);
-    const body = document.createElement("p");
-    body.className = "comment-body";
-    body.textContent = c.body;
-    card.append(head, body);
-    return card;
-  };
+/* COMMENTS */
+.comment-form {
+  display: flex; flex-direction: column; gap: 0.7rem;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem;
+  text-align: left; margin-bottom: 1.5rem;
+}
+.comment-input, .comment-textarea {
+  width: 100%; padding: 0.75rem 1rem;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font: inherit; font-size: 0.92rem; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.comment-input:focus, .comment-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.comment-textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+.comment-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.comment-count { font: 500 0.78rem/1 var(--mono); color: var(--text-3); }
+.comment-status { margin: 0; font-size: 0.82rem; padding: 0.5rem 0.7rem; border-radius: var(--radius-sm); }
+.comment-status.error { color: #f87171; background: rgba(248,113,113,0.1); }
+.comment-status.ok { color: #4ade80; background: rgba(74,222,128,0.1); }
 
-  const renderComments = () => {
-    const list = loadComments();
-    commentList.innerHTML = "";
-    if (!list.length) {
-      const empty = document.createElement("p");
-      empty.className = "comment-empty";
-      empty.textContent = "No comments yet — be the first.";
-      commentList.appendChild(empty);
-      return;
-    }
-    list.slice().reverse().forEach((c) => commentList.appendChild(renderComment(c)));
-  };
+.comment-list { display: flex; flex-direction: column; gap: 0.7rem; text-align: left; }
+.comment-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
+.comment-card-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+.comment-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.85rem; color: #fff; }
+.comment-author { font-weight: 600; font-size: 0.9rem; }
+.comment-time { margin-left: auto; font-size: 0.75rem; color: var(--text-3); }
+.comment-body { margin: 0; font-size: 0.88rem; line-height: 1.55; color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-empty { text-align: center; padding: 1.5rem; color: var(--text-3); font-size: 0.88rem; }
 
-  commentBody.addEventListener("input", () => {
-    commentCounter.textContent = commentBody.value.length + " / 1000";
-  });
+/* FOOTER */
+.footer { border-top: 1px solid var(--border); padding: 2.5rem 1.25rem; color: var(--text-3); font-size: 0.85rem; }
+.footer-inner { max-width: 1080px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; justify-content: space-between; }
+.footer nav { display: flex; gap: 1.2rem; }
+.footer nav a { color: var(--text-2); text-decoration: none; transition: color 0.15s; }
+.footer nav a:hover { color: var(--accent); }
+.footer .brand-name.small { font-size: 0.95rem; }
+.footer p { margin: 0.25rem 0 0; }
+.footer a { color: var(--accent); }
+.copy { color: var(--text-3); }
 
-  const setCommentStatus = (msg, kind) => {
-    if (!msg) { commentStatus.hidden = true; return; }
-    commentStatus.textContent = msg;
-    commentStatus.className = "comment-status " + (kind || "");
-    commentStatus.hidden = false;
-  };
+/* DROP OVERLAY */
+.drop-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(11,13,20,0.82); backdrop-filter: blur(8px); display: grid; place-items: center; pointer-events: none; }
+.drop-overlay[hidden] { display: none; }
+.drop-inner { border: 2px dashed var(--accent); border-radius: var(--radius-lg); padding: 2.5rem 3rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; color: #fff; font-size: 1.15rem; font-weight: 600; }
+.drop-inner svg { width: 48px; height: 48px; color: var(--accent); }
 
-  commentForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const name = commentName.value.trim().slice(0, 40);
-    const body = commentBody.value.trim();
+.search-flash { animation: search-flash 1.6s ease-out; border-radius: 6px; }
+@keyframes search-flash {
+  0% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+  100% { background-color: transparent; }
+}
 
-    if (body.length < 2) {
-      setCommentStatus("Please write a comment first.", "error");
-      commentBody.focus(); return;
-    }
-    if (BAD_RE.test(body) || BAD_RE.test(name)) {
-      setCommentStatus("Your comment contains language that isn't allowed. Please keep it civil.", "error");
-      return;
-    }
-
-    const list = loadComments();
-    const entry = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      name: name || "Anonymous",
-      body,
-      createdAt: Date.now(),
-    };
-    list.push(entry);
-    if (list.length > 100) list.splice(0, list.length - 100);
-    saveComments(list);
-
-    commentForm.reset();
-    commentCounter.textContent = "0 / 1000";
-    setCommentStatus("Posted — thanks for the feedback!", "ok");
-    setTimeout(() => setCommentStatus(null), 3500);
-    renderComments();
-  });
-
-  renderComments();
-
-  /* =========================================================
-     SEARCH
-     ========================================================= */
-  const pageSearch = $("#page-search");
-  pageSearch?.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter") return;
-    const q = pageSearch.value.trim().toLowerCase();
-    if (!q) return;
-    const targets = $$("h2, h3, .card h3, .format-card h3");
-    const hit = targets.find((el) => el.textContent.toLowerCase().includes(q));
-    if (hit) {
-      hit.scrollIntoView({ behavior: "smooth", block: "center" });
-      hit.classList.add("search-flash");
-      setTimeout(() => hit.classList.remove("search-flash"), 1600);
-    }
-  });
-
-  /* =========================================================
-     INIT
-     ========================================================= */
-  const init = () => {
-    const year = $("#year");
-    if (year) year.textContent = new Date().getFullYear();
-
-    // Sync theme to movi-player
-    const syncTheme = () => {
-      const theme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-      player?.setAttribute("theme", theme);
-    };
-    syncTheme();
-    new MutationObserver(syncTheme).observe(document.documentElement, {
-      attributes: true, attributeFilter: ["data-theme"]
-    });
-  };
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-  else init();
-})();
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .nav-search { width: 160px; }
+  .player-frame { flex-direction: column; }
+  .playlist { width: 100%; max-height: 320px; }
+}
+@media (max-width: 640px) {
+  .nav-search { display: none; }
+  .hero { padding-top: 3.5rem; }
+  .url-row { flex-wrap: wrap; }
+  .url-row input { flex: 1 1 100%; }
+  .btn-primary { flex: 1 1 auto; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
