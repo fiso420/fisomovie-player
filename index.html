@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FISOMOVIE PLAYER — Liquid Glass. Minimal. Fast. Responsive.</title>
+<meta name="description" content="A fast, private video player for direct video links, HLS streams and local files.">
+<meta name="theme-color" content="#0a0d1a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237fb4ff'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23fff'/%3E%3C/svg%3E">
+<script>try{var t=localStorage.getItem('fm-theme');if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.5v13l11-6.5z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h3.5v14H7zm6.5 0H17v14h-3.5z"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12A7.5 7.5 0 1 0 8 5.6"/><path d="M8 2.5v4h4"/></g><text x="12" y="15.5" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor">10</text></symbol>
+<symbol id="i-fwd" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12A7.5 7.5 0 1 1 16 5.6"/><path d="M16 2.5v4h-4"/></g><text x="12" y="15.5" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor">10</text></symbol>
+<symbol id="i-vol" viewBox="0 0 24 24"><path fill="currentColor" d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></symbol>
+<symbol id="i-mute" viewBox="0 0 24 24"><path fill="currentColor" d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M15.5 9.5l5 5m0-5l-5 5"/></symbol>
+<symbol id="i-cc" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="15" text-anchor="middle" font-size="7.5" font-weight="700" fill="currentColor">CC</text></symbol>
+<symbol id="i-pip" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="12" y="11" width="6.5" height="4.5" rx="1.2" fill="currentColor"/></symbol>
+<symbol id="i-fs" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M4 9V4h5m11 5V4h-5M4 15v5h5m11-5v5h-5"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></g></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path fill="currentColor" d="M20 14.5A8 8 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></symbol>
+</defs></svg>
+
+<header class="top">
+  <h1 class="brand"><span class="mark">FISOMOVIE</span><span class="sub">PLAYER</span></h1>
+  <button id="themeBtn" class="ib tbtn" type="button" aria-label="Switch theme"><svg class="ic-sun"><use href="#i-sun"/></svg><svg class="ic-moon"><use href="#i-moon"/></svg></button>
+</header>
+
+<main>
+  <section id="stage" class="stage" aria-label="Video player" data-state="idle">
+    <video id="video" playsinline preload="metadata"></video>
+    <div class="status" role="status" aria-live="polite">
+      <svg class="spin" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="60 60"/></svg>
+      <p id="statusText"></p>
+    </div>
+    <button id="bigPlay" class="big" type="button" aria-label="Play"><svg><use href="#i-play"/></svg></button>
+    <div class="dropmsg">Drop a video to play it</div>
+    <div id="bar" class="bar">
+      <div class="seekrow"><time id="cur">0:00</time><input id="seek" type="range" min="0" max="1000" step="1" value="0" disabled aria-label="Seek"><time id="dur">0:00</time></div>
+      <div class="btns">
+        <div class="grp">
+          <button id="back" class="ib" type="button" aria-label="Back 10 seconds" title="Back 10 s (J)"><svg><use href="#i-back"/></svg></button>
+          <button id="play" class="ib" type="button" aria-label="Play" title="Play / pause (K or Space)"><svg class="ic-play"><use href="#i-play"/></svg><svg class="ic-pause"><use href="#i-pause"/></svg></button>
+          <button id="fwd" class="ib" type="button" aria-label="Forward 10 seconds" title="Forward 10 s (L)"><svg><use href="#i-fwd"/></svg></button>
+          <button id="mute" class="ib" type="button" aria-label="Mute" title="Mute (M)"><svg class="ic-vol"><use href="#i-vol"/></svg><svg class="ic-mute"><use href="#i-mute"/></svg></button>
+          <input id="vol" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
+        </div>
+        <div class="grp">
+          <select id="rate" class="sel" aria-label="Playback speed">
+            <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="0.75">0.75x</option><option value="1" selected>1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option><option value="1.75">1.75x</option><option value="2">2x</option>
+          </select>
+          <button id="cc" class="ib" type="button" aria-label="Subtitles" aria-pressed="false" title="Subtitles (C)"><svg><use href="#i-cc"/></svg></button>
+          <button id="pip" class="ib" type="button" aria-label="Picture in Picture" title="Picture in Picture (P)" hidden><svg><use href="#i-pip"/></svg></button>
+          <button id="fs" class="ib" type="button" aria-label="Fullscreen" title="Fullscreen (F)"><svg><use href="#i-fs"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <p id="now" class="now"></p>
+
+  <section class="panel glass" aria-label="Load a video">
+    <form id="urlForm" novalidate>
+      <label for="url">Direct video URL</label>
+      <div class="row">
+        <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://example.com/video.mp4 or .m3u8">
+        <button class="btn primary" type="submit">Load video</button>
+      </div>
+    </form>
+    <div class="row acts">
+      <button id="fileBtn" class="btn" type="button">Open local file</button>
+      <button id="vttBtn" class="btn" type="button">Add subtitles (.vtt)</button>
+    </div>
+    <p id="note" class="note" role="status"></p>
+    <details>
+      <summary>What can I play?</summary>
+      <p>Links must point straight to a video file (MP4, WebM, MOV) or an HLS playlist (.m3u8). A web page address, such as a YouTube or Vimeo page, is not a video file and won’t play. Support depends on your browser’s codecs, and sites that don’t allow cross-origin access can block streams. Local files are played in your browser and never uploaded.</p>
+      <p>Shortcuts: Space or K play/pause, J / L skip 10 s, ← / → skip 5 s, ↑ / ↓ volume, M mute, F fullscreen, C subtitles, P Picture in Picture. You can also drop a video file onto the page.</p>
+    </details>
+  </section>
+  <input id="fileIn" type="file" accept="video/*" hidden>
+  <input id="vttIn" type="file" accept=".vtt,text/vtt" hidden>
+</main>
+<script src="script.js" defer></script>
+</body>
+</html>
