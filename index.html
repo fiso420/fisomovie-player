@@ -4,20 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FISOMOVIE PLAYER — Play any video, your way</title>
-<meta name="description" content="Free private online video player. Play MKV, MP4, HLS and local files right in your browser." />
+<meta name="description" content="Free private online video player. Play MKV, HEVC, AV1, 4K HDR and multi-audio files right in your browser." />
 
+<!-- Favicon (inline SVG, no .ico file needed) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23a78bfa'/%3E%3Cstop offset='1' stop-color='%2360a5fa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%230b0d14'/%3E%3Ccircle cx='16' cy='16' r='12' fill='none' stroke='url(%23g)' stroke-width='1.5'/%3E%3Cpath d='M13 10.5v11l9-5.5z' fill='url(%23g)'/%3E%3C/svg%3E" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
+
+<!-- MOVI-PLAYER: ek script tag, apnar repo theke -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/movi-player/dist/element.js"></script>
 </head>
 <body>
 
 <a class="skip-link" href="#player">Skip to player</a>
 
-<!-- HEADER -->
+<!-- ============ HEADER ============ -->
 <header class="navbar">
   <div class="nav-inner">
     <a class="brand" href="#" aria-label="FISOMOVIE PLAYER home">
@@ -57,13 +61,13 @@
   </div>
 </header>
 
-<!-- HERO -->
+<!-- ============ HERO ============ -->
 <section class="hero">
   <div class="hero-bg" aria-hidden="true"><div class="orb orb-1"></div><div class="orb orb-2"></div></div>
   <div class="hero-inner">
     <span class="eyebrow">Free online video player</span>
     <h1>Play any video, <span class="grad">your way.</span></h1>
-    <p class="hero-sub">Drop in a file, paste a link, or point at a folder. FISOMOVIE PLAYER decodes MKV, MP4, HLS and more right in your browser.</p>
+    <p class="hero-sub">Drop in a file, paste a link, or point at a folder. FISOMOVIE PLAYER plays MKV, HEVC, AV1, 4K HDR and multi-audio — right in your browser.</p>
 
     <div class="input-panel">
       <div class="tabs" role="tablist">
@@ -74,7 +78,7 @@
 
       <div class="pane active" data-pane="url">
         <div class="url-row">
-          <input type="text" id="url-input" placeholder="https://example.com/video.mp4 or .m3u8" aria-label="Video URL" />
+          <input type="text" id="url-input" placeholder="https://example.com/video.mkv or .m3u8" aria-label="Video URL" />
           <button class="paste-btn" id="paste-btn" type="button" title="Paste" aria-label="Paste link" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
           </button>
@@ -113,21 +117,29 @@
   </div>
 </section>
 
-<!-- PLAYER -->
+<!-- ============ PLAYER ============ -->
 <section class="player-section" id="player">
   <div class="player-frame">
     <div class="video-stage" id="video-stage">
-      <!-- ambient background video (blurred clone) -->
-      <video class="ambient-video" id="ambient-video" muted playsinline aria-hidden="true"></video>
-      <video id="video" playsinline preload="metadata"></video>
+      <!-- MOVI-PLAYER: native video er poriborte -->
+      <movi-player
+        id="movi-player"
+        controls
+        playsinline
+        preload="metadata"
+        ambientmode
+        cropbars
+        stablevolume
+        thumb="precise"
+      ></movi-player>
 
-      <!-- overlay -->
+      <!-- Overlay for loading / error -->
       <div class="stage-overlay" id="stage-overlay" hidden>
         <div class="spinner" id="stage-spinner"></div>
         <p id="stage-message"></p>
       </div>
 
-      <!-- offline / cut modal -->
+      <!-- Cut modal (Continue / Restart) -->
       <div class="cut-modal" id="cut-modal" hidden>
         <div class="cut-inner">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
@@ -139,129 +151,9 @@
           </div>
         </div>
       </div>
-
-      <button class="big-play" id="big-play" type="button" hidden aria-label="Play">
-        <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>
-      </button>
-
-      <!-- controls -->
-      <div class="controls" id="controls">
-        <div class="progress-wrap" id="progress-wrap">
-          <div class="progress-buffer" id="progress-buffer"></div>
-          <div class="progress-played" id="progress-played"><span class="scrubber"></span></div>
-          <input type="range" id="seek" class="seek-input" min="0" max="1000" value="0" step="1" aria-label="Seek" />
-        </div>
-
-        <div class="controls-row">
-          <div class="controls-left">
-            <button class="ctrl" id="play-pause" aria-label="Play">
-              <svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20"/></svg>
-              <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-            </button>
-            <button class="ctrl" id="skip-back" aria-label="Back 10 seconds">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/><text x="12" y="16" font-size="7" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text></svg>
-            </button>
-            <button class="ctrl" id="skip-fwd" aria-label="Forward 10 seconds">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 4 21 9 16 9"/><text x="12" y="16" font-size="7" font-weight="700" text-anchor="middle" fill="currentColor" stroke="none">10</text></svg>
-            </button>
-            <div class="volume-wrap">
-              <button class="ctrl" id="mute-btn" aria-label="Mute">
-                <svg class="i-vol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-                <svg class="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M11 5 6 9H2v6h4l5 4z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-              </button>
-              <input type="range" id="volume" class="volume-input" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
-            </div>
-            <span class="time-display"><span id="current-time">0:00</span> / <span id="duration">0:00</span></span>
-          </div>
-
-          <div class="controls-right">
-            <button class="ctrl" id="settings-btn" aria-label="Settings" aria-expanded="false">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-            </button>
-            <button class="ctrl" id="pip-btn" aria-label="Picture in picture" hidden>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="11" width="8" height="6" rx="1" fill="currentColor"/></svg>
-            </button>
-            <button class="ctrl" id="fs-btn" aria-label="Fullscreen">
-              <svg class="i-fs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-              <svg class="i-fs-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- settings panel -->
-      <div class="settings-panel" id="settings-panel" hidden>
-        <div class="settings-header">
-          <button class="back-btn" id="settings-back" type="button" hidden aria-label="Back">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <span id="settings-title">Settings</span>
-          <button class="close-btn" id="settings-close" type="button" aria-label="Close">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-
-        <div class="settings-view" data-view="root">
-          <button class="settings-item" data-open="quality" type="button">
-            <span class="item-label">Quality</span>
-            <span class="item-value" id="val-quality">Auto</span>
-          </button>
-          <button class="settings-item" data-open="speed" type="button">
-            <span class="item-label">Playback speed</span>
-            <span class="item-value" id="val-speed">1×</span>
-          </button>
-          <button class="settings-item" data-open="audio" type="button">
-            <span class="item-label">Audio track</span>
-            <span class="item-value" id="val-audio">Default</span>
-          </button>
-          <button class="settings-item" data-open="subs" type="button">
-            <span class="item-label">Subtitles</span>
-            <span class="item-value" id="val-subs">Off</span>
-          </button>
-          <button class="settings-item" data-open="aspect" type="button">
-            <span class="item-label">Aspect</span>
-            <span class="item-value" id="val-aspect">Fit</span>
-          </button>
-
-          <div class="section-label">Enhancements</div>
-
-          <label class="settings-toggle">
-            <span class="item-label">Ambient mode</span>
-            <input type="checkbox" id="toggle-ambient" />
-          </label>
-          <label class="settings-toggle">
-            <span class="item-label">Stable volume</span>
-            <input type="checkbox" id="toggle-stable" />
-          </label>
-          <label class="settings-toggle">
-            <span class="item-label">Crop black bars</span>
-            <input type="checkbox" id="toggle-crop" />
-          </label>
-          <label class="settings-toggle">
-            <span class="item-label">Loop</span>
-            <input type="checkbox" id="toggle-loop" />
-          </label>
-
-          <button class="settings-item" id="reset-settings" type="button">
-            <span class="item-label">Reset settings</span>
-          </button>
-        </div>
-
-        <div class="settings-view" data-view="speed" hidden></div>
-        <div class="settings-view" data-view="quality" hidden><div id="quality-list" class="choice-list"></div></div>
-        <div class="settings-view" data-view="audio" hidden><div id="audio-list" class="choice-list"></div></div>
-        <div class="settings-view" data-view="subs" hidden>
-          <div id="subs-list" class="choice-list"></div>
-          <label class="settings-item file-label" for="subtitle-file">
-            <span class="item-label">Load .vtt file…</span>
-          </label>
-          <input type="file" id="subtitle-file" accept=".vtt,text/vtt" hidden />
-          <p class="settings-note">External .srt / .ass files need conversion to WebVTT.</p>
-        </div>
-        <div class="settings-view" data-view="aspect" hidden><div id="aspect-list" class="choice-list"></div></div>
-      </div>
     </div>
 
+    <!-- Playlist -->
     <aside class="playlist" id="playlist" hidden aria-label="Playlist">
       <div class="playlist-head">
         <strong id="playlist-title">Playlist</strong>
@@ -272,28 +164,28 @@
   </div>
 </section>
 
-<!-- FORMATS -->
+<!-- ============ FORMATS ============ -->
 <section class="section" id="formats">
   <div class="section-inner">
     <span class="eyebrow">Compatibility</span>
     <h2>Supported codecs &amp; formats</h2>
-    <p class="section-sub">What plays today in a modern browser, and what may need extra decoding support.</p>
+    <p class="section-sub">Everything MOVI-PLAYER opens, right in your browser — no uploads, no server transcoding.</p>
 
     <div class="format-grid">
       <div class="format-card">
         <h3>Containers</h3>
         <div class="chip-row">
-          <span class="chip good">MP4</span><span class="chip good">WebM</span>
-          <span class="chip warn">MKV</span><span class="chip warn">AVI</span>
-          <span class="chip warn">MOV</span><span class="chip warn">FLV</span>
-          <span class="chip warn">MPEG-TS</span>
+          <span class="chip good">MKV</span><span class="chip good">MP4</span>
+          <span class="chip good">WebM</span><span class="chip good">AVI</span>
+          <span class="chip good">MOV</span><span class="chip good">FLV</span>
+          <span class="chip good">MPEG-TS</span>
         </div>
       </div>
       <div class="format-card">
         <h3>Video codecs</h3>
         <div class="chip-row">
-          <span class="chip good">H.264</span><span class="chip good">VP8 / VP9</span>
-          <span class="chip good">AV1</span><span class="chip warn">HEVC (H.265)</span>
+          <span class="chip good">H.264</span><span class="chip good">HEVC / H.265</span>
+          <span class="chip good">AV1</span><span class="chip good">VP8 / VP9</span>
         </div>
       </div>
       <div class="format-card">
@@ -301,14 +193,15 @@
         <div class="chip-row">
           <span class="chip good">AAC</span><span class="chip good">MP3</span>
           <span class="chip good">Opus</span><span class="chip good">FLAC</span>
-          <span class="chip warn">AC3</span>
+          <span class="chip good">AC3 / E-AC3</span>
         </div>
       </div>
       <div class="format-card">
         <h3>Subtitles</h3>
         <div class="chip-row">
-          <span class="chip good">WebVTT (.vtt)</span>
-          <span class="chip warn">SRT / ASS (convert)</span>
+          <span class="chip good">SRT</span><span class="chip good">ASS</span>
+          <span class="chip good">WebVTT</span><span class="chip good">PGS</span>
+          <span class="chip good">DVB</span>
         </div>
       </div>
       <div class="format-card">
@@ -319,28 +212,27 @@
         </div>
       </div>
     </div>
-    <p class="footnote">Demuxing and decoding happen on your device. MKV / HEVC / AC3 availability depends on your browser and OS.</p>
+    <p class="footnote">Demuxed by FFmpeg (WebAssembly), decoded by WebCodecs. Multi-audio track switching and adaptive quality included.</p>
   </div>
 </section>
 
-<!-- TROUBLESHOOTING -->
+<!-- ============ TROUBLESHOOTING ============ -->
 <section class="section alt" id="troubleshoot">
   <div class="section-inner">
     <span class="eyebrow">Troubleshooting</span>
     <h2>Why won't my video play?</h2>
     <div class="cards">
-      <article class="card"><h3>Unsupported codec</h3><p>The browser can't decode the video or audio stream. Try a different file or an HLS stream.</p></article>
-      <article class="card"><h3>Black screen or no audio</h3><p>Often a codec inside the container (e.g. HEVC or AC3). Only the video track may play.</p></article>
+      <article class="card"><h3>Unsupported codec</h3><p>Try a different file or an HLS stream. MOVI-PLAYER handles most codecs, but some DRM streams won't work.</p></article>
+      <article class="card"><h3>Black screen or no audio</h3><p>Often a codec inside the container. Check the audio track menu — multi-track switching is built in.</p></article>
       <article class="card"><h3>CORS error</h3><p>The remote server blocks cross-origin reads. Use a same-origin URL or a CORS-enabled host.</p></article>
       <article class="card"><h3>Expired or invalid URL</h3><p>Signed links time out. Re-copy the direct media URL and try again.</p></article>
       <article class="card"><h3>HLS playback fails</h3><p>Needs a valid .m3u8 manifest with CORS headers. Some DRM streams won't work.</p></article>
-      <article class="card"><h3>Subtitles missing</h3><p>Only WebVTT is read natively. Convert SRT/ASS first, then load the .vtt file.</p></article>
-      <article class="card"><h3>Buffering / stutter</h3><p>Slow network or oversized file. Try a lower-bitrate source or pause to buffer.</p></article>
+      <article class="card"><h3>Buffering / stutter</h3><p>Slow network or oversized file. Try a lower-bitrate source or pause to let it buffer.</p></article>
     </div>
   </div>
 </section>
 
-<!-- COMMENTS -->
+<!-- ============ COMMENTS ============ -->
 <section class="section" id="comments">
   <div class="section-inner narrow">
     <span class="eyebrow">Feedback</span>
@@ -361,12 +253,12 @@
   </div>
 </section>
 
-<!-- FOOTER -->
+<!-- ============ FOOTER ============ -->
 <footer class="footer">
   <div class="footer-inner">
     <div>
       <span class="brand-name small">FISOMOVIE<span class="brand-thin"> PLAYER</span></span>
-      <p>Bring the video. We handle the rest.</p>
+      <p>Powered by <a href="https://github.com/MrUjjwalG/movi-player" rel="noopener" target="_blank">movi-player</a>.</p>
     </div>
     <nav aria-label="Footer">
       <a href="#player">Player</a>
