@@ -249,32 +249,14 @@ a { color: inherit; }
   overflow: hidden; box-shadow: var(--shadow-lg);
   border: 1px solid var(--border); isolation: isolate;
 }
-.video-stage video { position: relative; z-index: 1; width: 100%; height: 100%; display: block; background: transparent; }
-.ambient-video {
-  position: absolute; inset: -5%; width: 110%; height: 110%;
-  object-fit: cover; filter: blur(60px) saturate(1.6);
-  opacity: 0; transition: opacity 0.5s;
-  z-index: 0; pointer-events: none;
+.video-stage movi-player {
+  width: 100%; height: 100%;
+  --movi-accent: var(--accent);
+  --movi-progress-color: var(--accent);
+  --movi-btn-hover-bg: color-mix(in srgb, var(--accent) 20%, transparent);
 }
-.video-stage.ambient-on .ambient-video { opacity: 0.7; }
-.video-stage.ambient-on { background: #000; }
 
-.video-stage.crop-black video { object-fit: cover; }
-
-.stage-overlay {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.62); color: #fff; gap: 1rem;
-  font-size: 0.92rem; z-index: 4; text-align: center; padding: 1rem;
-}
-.spinner {
-  width: 34px; height: 34px;
-  border: 3px solid rgba(255,255,255,0.18);
-  border-top-color: #fff; border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
+/* Cut / offline modal */
 .cut-modal {
   position: absolute; inset: 0; z-index: 5;
   display: flex; align-items: center; justify-content: center;
@@ -290,134 +272,6 @@ a { color: inherit; }
 .cut-inner h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
 .cut-inner p { margin: 0 0 1.1rem; color: var(--text-2); font-size: 0.88rem; }
 .cut-actions { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
-
-.big-play {
-  position: absolute; inset: 0; margin: auto;
-  width: 72px; height: 72px; display: grid; place-items: center;
-  border-radius: 50%; border: none;
-  background: rgba(255,255,255,0.14); backdrop-filter: blur(6px);
-  color: #fff; z-index: 3;
-  transition: transform 0.15s, background 0.15s;
-}
-.big-play:hover { transform: scale(1.06); background: rgba(255,255,255,0.22); }
-.big-play svg { width: 26px; height: 26px; margin-left: 4px; }
-
-.controls {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  padding: 1.6rem 0.9rem 0.7rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.88), rgba(0,0,0,0.4) 55%, transparent);
-  color: #fff; z-index: 2;
-  transition: opacity 0.25s, transform 0.25s;
-}
-.video-stage.controls-hidden .controls,
-.video-stage.controls-hidden .big-play { opacity: 0; transform: translateY(6px); pointer-events: none; }
-.video-stage.controls-hidden { cursor: none; }
-
-.progress-wrap {
-  position: relative; height: 5px;
-  background: rgba(255,255,255,0.2); border-radius: 3px;
-  margin: 0 0.35rem 0.6rem; cursor: pointer;
-  transition: height 0.15s;
-}
-.progress-wrap:hover { height: 8px; }
-.progress-buffer { position: absolute; inset: 0 auto 0 0; background: rgba(255,255,255,0.28); border-radius: inherit; width: 0%; }
-.progress-played { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: inherit; width: 0%; }
-.scrubber {
-  position: absolute; right: -6px; top: 50%; transform: translateY(-50%);
-  width: 13px; height: 13px; border-radius: 50%; background: #fff;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
-  opacity: 0; transition: opacity 0.15s; pointer-events: none;
-}
-.progress-wrap:hover .scrubber { opacity: 1; }
-.seek-input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-
-.controls-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.controls-left, .controls-right { display: flex; align-items: center; gap: 0.15rem; }
-
-.ctrl { width: 38px; height: 38px; display: grid; place-items: center; background: none; border: none; color: #fff; border-radius: 8px; transition: background 0.15s; }
-.ctrl:hover { background: rgba(255,255,255,0.14); }
-.ctrl svg { width: 19px; height: 19px; }
-
-.volume-wrap { display: flex; align-items: center; gap: 0.2rem; }
-.volume-input {
-  -webkit-appearance: none; appearance: none;
-  width: 0; opacity: 0; height: 4px;
-  background: rgba(255,255,255,0.28); border-radius: 3px;
-  transition: width 0.2s, opacity 0.2s; cursor: pointer; padding: 0;
-}
-.volume-wrap:hover .volume-input, .volume-wrap:focus-within .volume-input { width: 80px; opacity: 1; }
-.volume-input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: none; }
-.volume-input::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: none; }
-
-.time-display { font: 500 0.82rem/1 var(--mono); color: rgba(255,255,255,0.85); padding: 0 0.5rem; white-space: nowrap; }
-
-/* SETTINGS */
-.settings-panel {
-  position: absolute; right: 1rem; bottom: 72px; width: 300px;
-  max-width: calc(100% - 2rem);
-  background: rgba(20,22,32,0.96);
-  backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: var(--radius); color: #f0f2f8;
-  box-shadow: var(--shadow-lg); z-index: 6; overflow: hidden;
-  animation: popIn 0.16s ease-out;
-}
-[data-theme="light"] .settings-panel { background: rgba(255,255,255,0.98); color: var(--text); border-color: var(--border); }
-@keyframes popIn { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
-
-.settings-header {
-  display: flex; align-items: center; gap: 0.3rem;
-  padding: 0.7rem 0.75rem;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  font-weight: 600; font-size: 0.9rem;
-}
-[data-theme="light"] .settings-header { border-bottom-color: var(--border); }
-.settings-header span { flex: 1; }
-.back-btn, .close-btn {
-  width: 30px; height: 30px; display: grid; place-items: center;
-  background: none; border: none; color: inherit; border-radius: 6px;
-  transition: background 0.15s;
-}
-.back-btn:hover, .close-btn:hover { background: rgba(255,255,255,0.1); }
-.back-btn svg, .close-btn svg { width: 16px; height: 16px; }
-
-.settings-view { padding: 0.35rem 0; max-height: 380px; overflow-y: auto; }
-.settings-item, .settings-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
-  width: 100%; padding: 0.65rem 0.85rem;
-  background: none; border: none; color: inherit;
-  font: 500 0.87rem/1.3 var(--font); text-align: left; cursor: pointer;
-  transition: background 0.15s;
-}
-.settings-item:hover, .settings-toggle:hover { background: rgba(255,255,255,0.08); }
-[data-theme="light"] .settings-item:hover, [data-theme="light"] .settings-toggle:hover { background: rgba(0,0,0,0.045); }
-
-.item-value { color: var(--text-3); font-size: 0.82rem; }
-.settings-toggle input { accent-color: var(--accent); width: 18px; height: 18px; cursor: pointer; }
-
-.section-label {
-  padding: 0.7rem 0.85rem 0.3rem;
-  font: 700 0.68rem/1 var(--mono);
-  letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--text-3); opacity: 0.75;
-}
-
-.choice-list { display: flex; flex-direction: column; }
-.choice {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.6rem 0.9rem;
-  background: none; border: none; color: inherit;
-  font: 500 0.86rem/1.3 var(--font); text-align: left; cursor: pointer;
-  transition: background 0.12s;
-}
-.choice:hover { background: rgba(255,255,255,0.08); }
-[data-theme="light"] .choice:hover { background: rgba(0,0,0,0.04); }
-.choice .tick { color: var(--accent); width: 16px; height: 16px; opacity: 0; flex-shrink: 0; }
-.choice.selected .tick { opacity: 1; }
-.choice.disabled { opacity: 0.4; cursor: not-allowed; }
-
-.file-label { cursor: pointer; }
-.settings-note { margin: 0.3rem 0.9rem 0.7rem; font-size: 0.75rem; color: var(--text-3); line-height: 1.45; }
 
 /* PLAYLIST */
 .playlist {
@@ -538,8 +392,6 @@ a { color: inherit; }
   .url-row { flex-wrap: wrap; }
   .url-row input { flex: 1 1 100%; }
   .btn-primary { flex: 1 1 auto; justify-content: center; }
-  .time-display { display: none; }
-  .settings-panel { right: 0.5rem; left: 0.5rem; width: auto; bottom: 68px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
