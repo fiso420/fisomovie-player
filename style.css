@@ -2,14 +2,12 @@
    FISOMOVIE PLAYER — Apple Liquid Glass Architectural Stylesheet
    ========================================================================== */
 
-/* Design Tokens & CSS Variables */
 :root {
   --accent-color: #6366f1;
   --accent-rgb: 99, 102, 241;
   --accent-hover: #4f46e5;
   --accent-glow: rgba(99, 102, 241, 0.35);
 
-  /* Dark Mode Defaults */
   --bg-base: #090b10;
   --bg-gradient: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #090b10 80%);
   --panel-bg: rgba(18, 22, 34, 0.72);
@@ -20,7 +18,7 @@
   --text-muted: #64748b;
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 100%);
   --glass-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
-  --player-ctrls-bg: rgba(10, 13, 20, 0.78);
+  --player-ctrls-bg: rgba(10, 13, 20, 0.82);
   --input-bg: rgba(15, 23, 42, 0.6);
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -32,7 +30,7 @@
 [data-theme="light"] {
   --bg-base: #f1f5f9;
   --bg-gradient: radial-gradient(circle at 50% -20%, #e0e7ff 0%, #f1f5f9 85%);
-  --panel-bg: rgba(255, 255, 255, 0.75);
+  --panel-bg: rgba(255, 255, 255, 0.82);
   --panel-border: rgba(0, 0, 0, 0.07);
   --panel-border-hover: rgba(0, 0, 0, 0.15);
   --text-primary: #0f172a;
@@ -40,11 +38,10 @@
   --text-muted: #94a3b8;
   --glass-reflection: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
   --glass-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
-  --player-ctrls-bg: rgba(255, 255, 255, 0.82);
-  --input-bg: rgba(255, 255, 255, 0.85);
+  --player-ctrls-bg: rgba(255, 255, 255, 0.88);
+  --input-bg: rgba(255, 255, 255, 0.9);
 }
 
-/* Base Reset & Typography */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -53,15 +50,13 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-base);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
   line-height: 1.5;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
   padding: 1rem 0.75rem 3rem;
   transition: background-color 0.35s ease, color 0.35s ease;
 }
@@ -74,7 +69,6 @@ body {
   gap: 1.25rem;
 }
 
-/* Glassmorphism Panel Base */
 .glass-header, .glass-panel, .drawer-card, .modal-card {
   background: var(--panel-bg);
   backdrop-filter: blur(24px) saturate(180%);
@@ -87,18 +81,6 @@ body {
   transition: var(--transition-smooth);
 }
 
-.glass-header::before, .glass-panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: var(--glass-reflection);
-  pointer-events: none;
-}
-
-/* Header & Star Button */
 .glass-header {
   display: flex;
   justify-content: space-between;
@@ -117,7 +99,6 @@ body {
 .brand-icon {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
 }
 
 .brand-title strong {
@@ -151,7 +132,6 @@ body {
   border-color: var(--accent-color);
 }
 
-/* Buttons and Inputs */
 .icon-btn, .ctrl-btn {
   background: transparent;
   border: none;
@@ -213,7 +193,6 @@ body {
   border-color: var(--panel-border-hover);
 }
 
-/* Media Source Controller */
 .source-controller {
   padding: 1rem 1.25rem;
 }
@@ -266,22 +245,22 @@ body {
 }
 
 .file-picker-label {
-  margin-bottom: 0;
   cursor: pointer;
+  margin-bottom: 0;
 }
 
-.drop-hint {
+.source-hint-banner {
   margin-top: 0.75rem;
-  padding: 0.5rem;
-  text-align: center;
-  font-size: 0.775rem;
-  color: var(--text-muted);
-  border: 1px dashed var(--panel-border);
+  padding: 0.65rem 0.9rem;
   border-radius: var(--radius-sm);
+  font-size: 0.825rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
 }
 
 /* ==========================================================================
-   VIDEO PLAYER SURFACE & CONTROLS OVERLAYS
+   VIDEO PLAYER SURFACE & CONTROLS
    ========================================================================== */
 .player-wrapper {
   position: relative;
@@ -293,14 +272,10 @@ body {
   outline: none;
 }
 
-.player-wrapper:focus-visible {
-  box-shadow: 0 0 0 3px var(--accent-color);
-}
-
 .video-aspect-box {
   position: relative;
   width: 100%;
-  padding-top: 56.25%; /* 16:9 standard */
+  padding-top: 56.25%;
   background: #000;
 }
 
@@ -314,7 +289,6 @@ body {
   background: #000;
 }
 
-/* Subtitles Custom Overlay */
 .subtitle-overlay {
   position: absolute;
   bottom: 80px;
@@ -333,14 +307,10 @@ body {
   padding: 0.3rem 0.8rem;
   border-radius: 6px;
   font-weight: 500;
-  line-height: 1.4;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   font-size: 22px;
   max-width: 90%;
-  display: inline-block;
 }
 
-/* Center Feedback Icon (Play / Pause splash) */
 .center-feedback-indicator {
   position: absolute;
   top: 50%;
@@ -372,7 +342,6 @@ body {
   height: 36px;
 }
 
-/* Buffering / Loading Ring */
 .player-loading-spinner {
   position: absolute;
   top: 50%;
@@ -410,7 +379,85 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* Player Liquid Glass Controls Bar */
+/* REFINED INTERRUPTED MODAL WITH DIAGNOSTIC BOX */
+.player-overlay-modal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 7, 12, 0.82);
+  z-index: 30;
+  padding: 1.25rem;
+}
+
+.modal-card {
+  max-width: 520px;
+  width: 100%;
+  padding: 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modal-icon-wrap svg {
+  width: 48px;
+  height: 48px;
+  color: var(--accent-color);
+}
+
+.modal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.diagnostic-box {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.diag-header {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.diag-text {
+  font-size: 0.825rem;
+  color: #fca5a5;
+  word-break: break-word;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.modal-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Player Controls */
 .player-controls-container {
   position: absolute;
   left: 1rem;
@@ -438,7 +485,6 @@ body {
   pointer-events: none;
 }
 
-/* Timeline & Scrubber */
 .scrubber-wrapper {
   position: relative;
   width: 100%;
@@ -514,7 +560,6 @@ body {
   display: none;
 }
 
-/* Controls Row */
 .controls-row {
   display: flex;
   justify-content: space-between;
@@ -585,62 +630,11 @@ body {
   opacity: 0.5;
 }
 
-/* Interruption Recovery & Modal Overlays */
-.player-overlay-modal {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(5, 7, 12, 0.75);
-  z-index: 30;
-  padding: 1rem;
-}
-
-.modal-card {
-  max-width: 420px;
-  width: 100%;
-  padding: 2rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.modal-icon-wrap svg {
-  width: 48px;
-  height: 48px;
-  color: var(--accent-color);
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.modal-desc {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.modal-actions {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.modal-note {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-/* Settings Popover Dropdown */
 .settings-popover {
   position: absolute;
   right: 1rem;
   bottom: 4.5rem;
-  width: 250px;
+  width: 260px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   box-shadow: var(--glass-shadow);
@@ -693,7 +687,6 @@ body {
   font-weight: 600;
 }
 
-/* Info Panel & Codecs */
 .info-banner {
   padding: 1.25rem;
   display: flex;
@@ -729,7 +722,6 @@ body {
   color: var(--text-muted);
 }
 
-/* Expandable Drawer */
 .expandable-drawer {
   padding: 1rem 1.25rem;
 }
@@ -777,7 +769,6 @@ body {
   margin-top: 0.35rem;
 }
 
-/* Theme Drawer Modal */
 .theme-drawer {
   position: fixed;
   inset: 0;
@@ -873,7 +864,6 @@ body {
   font-size: 0.85rem;
 }
 
-/* Comments Section */
 .comments-section {
   padding: 1.5rem;
   display: flex;
@@ -990,7 +980,6 @@ body {
   margin-top: 0.5rem;
 }
 
-/* Footer */
 .app-footer {
   text-align: center;
   font-size: 0.75rem;
@@ -998,7 +987,6 @@ body {
   padding: 1rem 0;
 }
 
-/* Utility Helpers */
 .visually-hidden {
   display: none !important;
 }
@@ -1007,17 +995,6 @@ body {
   width: 100%;
 }
 
-/* Reduced Motion Mode Support */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Responsive Breakpoints */
 @media (max-width: 768px) {
   .player-controls-container {
     left: 0.5rem;
@@ -1036,7 +1013,7 @@ body {
   }
 
   .settings-popover {
-    width: 210px;
+    width: 220px;
     bottom: 4rem;
     right: 0.5rem;
   }
