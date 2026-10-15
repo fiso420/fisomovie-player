@@ -1,63 +1,88 @@
-Act as a senior frontend developer and professional UI/UX designer. Update my existing open-source project **FISOMOVIE PLAYER** with a polished, user-friendly donation section.
+# FISOMOVIE PLAYER
 
-**GitHub:** https://github.com/fiso420/fisomovie-player
+A lightweight, modern HTML5 web video player featuring an Apple Liquid Glass design language, native cross-origin playback, adaptive HLS streaming, multi-track audio support, in-memory subtitle parsing, and built-in stream diagnostics.
 
-### 1. Donation section design
-Create a premium “Buy Me a Coffee ☕” section using the existing website design:
-- iOS-inspired Liquid Glass UI.
-- Dark and light theme compatibility.
-- Responsive layout for mobile, tablet, and desktop.
-- Attractive coffee icon, subtle animations, and clean typography.
-- A friendly message thanking users for supporting open-source development.
-- Make donations completely optional. Never restrict player features.
+**Repository:** [https://github.com/fiso420/fisomovie-player](https://github.com/fiso420/fisomovie-player)  
+**Deployment:** Zero-build static website ready for Vercel, Netlify, GitHub Pages, or any standard HTTP server.
 
-### 2. WebMoney wallet information
-Use the following public wallet information from my wallet screenshot:
+---
 
-- Payment service: WebMoney
-- Wallet type shown: WMT
-- Wallet number: `T668356659070`
-- WMID: `625444252474`
+## Overview & Core Features
 
-Use the WMT wallet number as the proposed receiving identifier only after verifying that it supports incoming payments. Do not use the WMID as a substitute for the wallet number.
+FISOMOVIE PLAYER is built using vanilla HTML5, CSS3, and JavaScript with no heavyweight frontend frameworks. It provides a clean, responsive interface optimized for mobile phones, tablets, laptops, and desktop monitors.
 
-### 3. Donation interaction
-- Add a “Donate with WebMoney” button only when a verified payment destination or official payment URL is configured.
-- If WebMoney provides a supported payment URL, use the real URL rather than inventing one.
-- Add a Copy Wallet Number button if the receiving method supports manual transfers.
-- Display a confirmation message when the wallet number is copied.
-- If a QR code or payment link is available, display it only after its authenticity and destination are verified.
-- Never claim a donation was received unless payment confirmation is implemented.
-- Never ask visitors for passwords, verification codes, private keys, or sensitive account information.
+- **Streaming Pipelines**:
+  - **Native Progressive Playback**: Direct streaming for compatible MP4 and WebM files without mandatory CORS headers on media endpoints.
+  - **HLS Adaptive Streaming**: Pinned integration with `Hls.js` for `.m3u8` master and media playlists. Automatic fallback to native HLS on Apple Safari / iOS WebKit.
+- **Playback Controls**:
+  - Play, pause, skip backward/forward by 10 seconds.
+  - Interactive timeline scrubber with buffered range display and seek preview tooltip.
+  - Volume slider with persistent mute toggle.
+  - Fullscreen API and Picture-in-Picture (PiP) support where permitted by the browser.
+  - Playback speed selection (0.25x, 0.5x, 0.75x, 1x, 1.25x, 1.5x, 1.75x, 2x).
+  - Auto-hiding control bar on idle during active playback.
+- **Audio & Rendition Controls**:
+  - **Adaptive Quality Menu**: Exposes real HLS stream levels (e.g., 1080p, 720p, 480p, 360p) with an Auto mode. Explains when progressive MP4 files are playing at their fixed native resolution.
+  - **Audio Track Selector**: Seamlessly switches audio tracks on HLS streams (`hls.audioTracks`) and native multi-track engines (Safari `video.audioTracks`). Displays transparent diagnostic messages on Chromium/Firefox when container constraints prevent multi-audio demuxing on static files.
+- **Subtitles & Text Tracks**:
+  - Supports external `.vtt` and `.srt` subtitle files.
+  - Instant client-side parsing of `.srt` files into memory using Web Workers and Blob URLs (no backend upload required).
+  - Configurable subtitle text sizes (Small, Normal, Large, Extra Large).
+- **Stream Diagnostics & Interruption Recovery**:
+  - Pre-flight URL inspector that identifies file-host landing pages (such as VikingFile, Google Drive, MediaFire, Mega, Dropbox) and alerts users that direct media byte streams are required.
+  - Granular error decomposition (`MEDIA_ERR_ABORTED`, `MEDIA_ERR_NETWORK`, `MEDIA_ERR_DECODE`, `MEDIA_ERR_SRC_NOT_SUPPORTED`).
+  - Actionable recovery modal offering **Retry Stream**, **Open Local File**, and **Restart** options.
+- **Appearance & Liquid Glass UI**:
+  - Translucent glassmorphic panels (`backdrop-filter: blur()`), soft borders, and fluid micro-interactions.
+  - Dark, Light, and System theme synchronization.
+  - Accent palette presets plus a custom HEX color picker persisted in `localStorage`.
+  - Respects user accessibility preferences (`prefers-reduced-motion`).
+- **Community Discussion Demo**:
+  - Client-side comment board with basic moderation filters and strict DOM text escaping to demonstrate safe UI rendering.
 
-### 4. Configuration
-Create a clearly documented configuration object:
+---
 
+## Support the Project ☕
+
+FISOMOVIE PLAYER is completely free and open source. All playback features, controls, and streaming modules are unrestricted for all users.
+
+If this player has been useful to you and you wish to support ongoing maintenance and cross-browser testing, optional donations via WebMoney are appreciated.
+
+### WebMoney Wallet Information
+
+| Parameter | Details |
+| :--- | :--- |
+| **Payment Service** | WebMoney Transfer |
+| **Wallet Type** | WMT |
+| **Receiving Wallet Number** | `T668356659070` |
+| **WMID** | `625444252474` |
+| **Status** | Manual transfer supported. Direct web checkout pending gateway verification. |
+
+> **Security & Privacy Notice:**
+> - Donations are completely voluntary. Donating does not unlock extra features or bypass player limitations.
+> - Always use the **Wallet Number** (`T668356659070`) as the payment destination. The WMID is an account identifier and should not be used as a replacement for the wallet number during a transfer.
+> - FISOMOVIE PLAYER will never ask you for passwords, SMS confirmation codes, private keys, or personal account credentials.
+> - Automated payment receipts and transaction verifications are not processed on this static site. Verify all details directly within your official WebMoney Keeper application before sending funds.
+
+### How to Send an Optional Transfer
+1. Open your official **WebMoney Keeper** application (mobile, desktop, or web).
+2. Select **Transfer** &rarr; **To a purse**.
+3. Choose **WMT** as the currency/purse type.
+4. Enter the receiving purse number: `T668356659070`.
+5. Enter your desired amount and confirm the transaction inside your WebMoney app.
+
+---
+
+## Configuration
+
+Donation parameters and toggle states are managed in `script.js` via a dedicated configuration object:
+
+```javascript
 const DONATION_CONFIG = {
   provider: "WebMoney",
   walletType: "WMT",
   walletNumber: "T668356659070",
   wmid: "625444252474",
-  paymentUrl: "",
-  enabled: false
+  paymentUrl: "", // Add verified merchant/payment URL once confirmed
+  enabled: false  // Set to true once incoming payment setup has been tested
 };
-
-Keep the donation section disabled until I verify the wallet's incoming-payment instructions and configure a valid payment method. Do not invent a payment URL.
-
-### 5. README update
-Update `README.md` with:
-- Project overview and actual features.
-- A Support the Project section.
-- WebMoney donation instructions.
-- A note that donations are optional.
-- Installation and deployment instructions.
-- Troubleshooting and contribution guidelines.
-
-Do not invent a license, features, payment confirmation, donation statistics, or supported payment capabilities.
-
-### 6. Code quality
-Inspect the existing repository before modifying anything. Preserve working player functionality and existing project architecture. Use the appropriate files for the current stack. Implement secure clipboard handling, accessible controls, mobile responsiveness, and useful error messages.
-
-Provide the complete updated code, list the changed files, and explain how to deploy the result on Vercel or Netlify.
-
-Do not claim that the donation system is operational until the receiving method has been verified and tested.
