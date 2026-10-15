@@ -70,19 +70,3 @@ If this player has been useful to you and you wish to support ongoing maintenanc
 3. Choose **WMT** as the currency/purse type.
 4. Enter the receiving purse number: `T668356659070`.
 5. Enter your desired amount and confirm the transaction inside your WebMoney app.
-
----
-
-## Configuration
-
-Donation parameters and toggle states are managed in `script.js` via a dedicated configuration object:
-
-```javascript
-const DONATION_CONFIG = {
-  provider: "WebMoney",
-  walletType: "WMT",
-  walletNumber: "T668356659070",
-  wmid: "625444252474",
-  paymentUrl: "", // Add verified merchant/payment URL once confirmed
-  enabled: false  // Set to true once incoming payment setup has been tested
-};
